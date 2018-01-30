@@ -22,3 +22,5 @@ cabal.sandbox.config
 .stack-work/
 cabal.project.local
 .HTF/
+
+*.w64
