@@ -21,6 +21,7 @@ description:         Please see the README on Github at <https://github.com/gith
 
 dependencies:
 - base >= 4.7 && < 5
+- hsndfile
 
 library:
   source-dirs: src
@@ -35,6 +36,7 @@ executables:
     - -with-rtsopts=-N
     dependencies:
     - TimeLines
+    - hsndfile
 
 tests:
   TimeLines-test:
@@ -46,3 +48,4 @@ tests:
     - -with-rtsopts=-N
     dependencies:
     - TimeLines
+    - hsndfile
