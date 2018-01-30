@@ -1,4 +1,0 @@
-fact 1 = 0
-fact n = n * fact (n-1)
-
-oeu ueoauoeujohn = 5 {-# SCC "" #-}   uuoauaoeux
