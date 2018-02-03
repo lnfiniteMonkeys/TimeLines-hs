@@ -6,18 +6,31 @@ module Lib
 import Sound.File.Sndfile as SF
 import System.Directory
 import System.IO as IO
-
+import Foreign.Marshal.Array as MA
+import Foreign.ForeignPtr as FP
 
 someFunc :: IO ()
 someFunc = do
-  let frames = 512
+  let rate = 10000
+      frames = rate*60
       fileName = "testFile.w64"
-      info = Info frames 441000 1 format 1 True
       format = Format HeaderFormatW64 SampleFormatDouble EndianFile
-      --format <- Format HeaderFormatW64 SampleFormatDouble EndianFile
+      info = Info frames rate 1 format 1 True
       
-  IO.openFile fileName IO.ReadWriteMode -- write empty file
-  hout <- SF.openFile fileName SF.WriteMode info -- open a write handle
-  print $ SF.duration info
+  IO.openFile fileName IO.ReadWriteMode -- open/make empty file
+  hout <- SF.openFile fileName SF.ReadWriteMode info -- open a write handle
+  
+  --buff <- SF.hGetBuffer hout frames
+ -- writeNum <- SF.hPutBuf hout () 512
+  
+  let array = [sin x | x <- take frames [0, 1..]]::[Double]
+  arrayPtr <- MA.newArray array
+  --foreignPtr <- FP.newForeignPtr_ arrayPtr
+  --buff <- SF.fromForeignPtr foreignPtr 0 1000
+ -- report <- SF.hPutBuffer hout buff
+  report <- SF.hPutBuf hout arrayPtr frames
+  print report
+  
   SF.hClose hout -- close handle
   return ()
+
