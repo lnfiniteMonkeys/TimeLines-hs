@@ -11,7 +11,7 @@ import Foreign.ForeignPtr as FP
 
 someFunc :: IO ()
 someFunc = do
-  let rate = 10000
+  let rate = 700
       frames = rate*60
       fileName = "testFile.w64"
       format = Format HeaderFormatW64 SampleFormatDouble EndianFile
@@ -23,7 +23,11 @@ someFunc = do
   --buff <- SF.hGetBuffer hout frames
  -- writeNum <- SF.hPutBuf hout () 512
   
-  let array = [sin x | x <- take frames [0, 1..]]::[Double]
+  let --function x = sin x * sin $ x*0.5
+      --phasor = [x/frames | x <- take frames [0, 1..]::[Double]]
+      --array = map function phasor
+
+      array = [2.0 * (sin x) | x <- take frames [0, 1..]]::[Double]
   arrayPtr <- MA.newArray array
   --foreignPtr <- FP.newForeignPtr_ arrayPtr
   --buff <- SF.fromForeignPtr foreignPtr 0 1000
@@ -33,4 +37,3 @@ someFunc = do
   
   SF.hClose hout -- close handle
   return ()
-
