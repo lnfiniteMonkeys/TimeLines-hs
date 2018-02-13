@@ -9,6 +9,7 @@ import System.IO as IO
 import Foreign.Marshal.Array as MA
 import Foreign.ForeignPtr as FP
 
+import Signal
 
 
 type Time = Double
@@ -21,9 +22,13 @@ data TLinfo = TLinfo {duration::Double,
                      }
               deriving (Eq, Show)
 
---data Signal = Signal{render::Time -> [Value]}
 
-type Signal = Double
+
+
+
+
+
+
 
 {-
 
