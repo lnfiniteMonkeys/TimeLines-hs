@@ -10,7 +10,7 @@ import Control.Applicative
 import Prelude
 
 --Time and value are the inputs and outputs of a Signal
-type Time = Double
+type Time = Rational
 type Value = Double
 
 --A signal of value type a gets constructed by passing a function from time to a
@@ -83,11 +83,11 @@ sig :: (Time -> a) -> Signal a
 sig f = Signal $ \t -> f t
 
 --Slows time for a signal by a factor
-slow :: Signal a -> Value -> Signal a
+slow :: Signal a -> Time -> Signal a
 slow (Signal f) fact = Signal $ \t -> let t' = t/fact 
                                       in f t'
 
-fast :: Signal a -> Value -> Signal a
+fast :: Signal a -> Time -> Signal a
 fast sig a = slow sig (-a)
 
 
@@ -99,7 +99,6 @@ constSig s = Signal $ \_ -> s
 --testFunc :: Time -> Value
 testFunc t = sin t
 
-test = Signal testFunc
 
 anotherFunc :: Value -> Value
 anotherFunc a = a + 2
@@ -108,9 +107,11 @@ anotherFunc a = a + 2
 
 
 testA :: Signal Double
-testA = 0.34
+testA = 0.3
 
 
+testB :: Rational
+testB = 0.2
 
 
 
