@@ -15,22 +15,70 @@ default (Double, Rational)
 
 --type Range = Integer
 
+
+
 data TLinfo = TLinfo {infoDur::Time,
                       infoSR::Int,
+                      infoChannels::Int,
                       infoParam::String
                      }
               deriving (Eq, Show)
 
+data TimeLine = TimeLine {tlSig::Signal Double,
+                          tlInfo::TLinfo}
 
 
-dur = 0.5
-testInfo = TLinfo dur 700 "Filter"
-testSignal :: Signal Double
-testSignal = Signal $ \t ->
-  let phasor = t/dur
-  in  sin $ 2*pi * phasor**2 * 3 
+defaultSR = 700
+
+defaultInfo :: Time -> String -> TLinfo
+defaultInfo dur name = TLinfo dur defaultSR 1 name 
+
+--Takes a TLinfo and returns the ReadWrite handle to a file
+openHandle :: TLinfo -> IO SF.Handle
+openHandle (TLinfo dur sr chan param) = SF.openFile filename SF.ReadWriteMode info
+        where filename = param ++ ".w64"
+              format = Format HeaderFormatW64 SampleFormatDouble EndianFile
+              numFrames = floor $ dur * fromIntegral sr
+              info = SF.Info numFrames sr 1 format 1 True
 
 
+
+fromToIn :: (Fractional a, Enum a) => a -> a -> Int -> [a]
+fromToIn lo hi steps = [lo, lo+step .. hi]
+  where
+    range = hi - lo
+    step = range / (fromIntegral steps)
+
+{-
+getArray :: TimeLine -> [Value]
+getArray (TimeLine (Signal f) info) = map f samples
+  where samples = let numFrames = round $ dur * (fromIntegral $ infoSR info)
+                  in  map (\x -> f x) (take numFrames [0, 1..])
+-}
+
+getArray :: TimeLine -> [Value]
+getArray (TimeLine sig info@(TLinfo dur sr _ _)) = map f domain
+  where f = valueAt sig
+        numFrames = dur * fromIntegral sr
+        step = 1/(dur * fromIntegral sr)
+        domain = [0, 0+step .. 1]
+
+
+writeTL :: TimeLine -> IO Int
+writeTL tl@(TimeLine sig info) = do
+  let fileName = infoParam info ++ ".w64"
+  IO.openFile fileName IO.ReadWriteMode
+  h <- openHandle info
+  arrayPtr <- MA.newArray $ getArray tl
+  framesWritten <- SF.hPutBuf h arrayPtr $ infoSR info
+  SF.hClose h
+  return  framesWritten
+ 
+
+--writeSignal :: Signal Double -> TLinfo -> IO()
+
+
+{-
 
 
 
@@ -53,15 +101,10 @@ writeSignal (Signal sf) info =  do
 write = do
   writeSignal testSignal testInfo
 
-
+-}
 
 {-
 
---getArray :: TLinfo -> (Time -> Value) -> [Value]
---getArray (TLinfo dur sr param) f =install .tar.xz
---  map f samples
---  where samples = let numFrames = round $ dur * (fromIntegral sr)
---                  in  map (\x -> f x) (take numFrames [0, 1..])
 
 
 
