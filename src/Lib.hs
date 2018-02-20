@@ -11,22 +11,47 @@ import Foreign.ForeignPtr as FP
 
 import Signal
 
+default (Double, Rational)
 
-type Time = Double
-type Value = Double
-type Range = Integer
+--type Range = Integer
 
-data TLinfo = TLinfo {duration::Double,
-                      sampleRate::Int,
-                      param::String
+data TLinfo = TLinfo {infoDur::Time,
+                      infoSR::Int,
+                      infoParam::String
                      }
               deriving (Eq, Show)
 
 
 
+dur = 0.5
+testInfo = TLinfo dur 700 "Filter"
+testSignal :: Signal Double
+testSignal = Signal $ \t ->
+  let phasor = t/dur
+  in  sin $ 2*pi * phasor**2 * 3 
 
 
 
+
+
+writeSignal :: Signal Double -> TLinfo -> IO()
+writeSignal (Signal sf) info =  do
+        let numFrames = floor $ (infoDur info) * (fromIntegral $ infoSR info)
+            domain =  map fromIntegral $ take numFrames [0::Int, 1..]
+            array = map sf $ map (\t -> t * infoDur info / fromIntegral numFrames) domain
+            fileName = infoParam info ++ ".w64"
+            format = Format HeaderFormatW64 SampleFormatDouble EndianFile
+            fileInfo = Info numFrames (infoSR info) 1 format 1 True
+        IO.openFile fileName IO.ReadWriteMode
+        hout <- SF.openFile fileName SF.ReadWriteMode fileInfo
+        arrayPtr <- MA.newArray array
+        framesWritten <- SF.hPutBuf hout arrayPtr numFrames
+        print framesWritten
+        SF.hClose hout
+        return ()
+
+write = do
+  writeSignal testSignal testInfo
 
 
 
