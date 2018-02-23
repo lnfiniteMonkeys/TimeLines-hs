@@ -10,7 +10,7 @@ import Control.Applicative
 import Prelude
 
 --Time and value are the inputs and outputs of a Signal
-type Time = Rational
+type Time = Double
 type Value = Double
 
 --A signal of value type a gets constructed by passing a function from time to a
@@ -40,13 +40,13 @@ instance Monad Signal where
   -- :: Signal a -> (a -> Signal b) -> Signal b
   (Signal s) >>= f = Signal $ \t -> let newA = s t
                                         sigB = f newA
-                                    in valueAt sigB t
-  
+                                    in  valueAt sigB t
+--FRACTIONAL
 instance (Fractional a, Eq a) => Fractional (Signal a) where
   recip        = fmap recip
   fromRational = pure . fromRational
 
-
+--FLOATING
 instance (Floating a, Eq a) => Floating (Signal a) where
   pi    = pure pi
   sqrt  = fmap sqrt
@@ -63,6 +63,14 @@ instance (Floating a, Eq a) => Floating (Signal a) where
   atanh = fmap atanh
   acosh = fmap acos
 
+{-
+instance (Real a, Ord a) => Real (Signal a) where
+  cosh  = fmap cosh
+  asinh = fmap asinh
+  atanh = fmap atanh
+  acosh = fmap acosh
+-}
+
 --NUM
 instance (Num a, Eq a) => Num (Signal a) where
       negate      = fmap negate
@@ -74,23 +82,24 @@ instance (Num a, Eq a) => Num (Signal a) where
 
 
 (.*) :: (Num a, Eq a) => a -> a -> a
-(.*) 0 _ = 0
+(.*) 0 _ = 3
 (.*) a b = a * b
+
+
+--s1 = constSig 3
+--s2 = constSig
 
 
 
 sig :: (Time -> a) -> Signal a   
 sig f = Signal $ \t -> f t
 
---Slows time for a signal by a factor
-slow :: Signal a -> Time -> Signal a
-slow (Signal f) fact = Signal $ \t -> let t' = t/fact 
-                                      in f t'
-
-fast :: Signal a -> Time -> Signal a
-fast sig a = slow sig (-a)
-
-
+--Speeds up time for a signal by a factor
+fast :: Signal a -> Signal Time -> Signal a
+fast (Signal sf) (Signal r) = Signal $ \t -> let t' = t * (r t)
+                                             in  sf t'
+slow :: Signal a -> Signal Time -> Signal a
+slow s r = fast s (1/r) 
 
 
 constSig :: a -> Signal a
@@ -102,22 +111,6 @@ testFunc t = sin t
 
 anotherFunc :: Value -> Value
 anotherFunc a = a + 2
-
-
-
-
-testA :: Signal Double
-testA = 0.3
-
-
-testB :: Rational
-testB = 0.2
-
-
-
-
-
-
 
 
 {-
