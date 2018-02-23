@@ -4,18 +4,17 @@ module Lib
 
 --import Control.Concurrent
 import Sound.File.Sndfile as SF
-import System.Directory
 import System.IO as IO
 import Foreign.Marshal.Array as MA
+import Foreign.Ptr
 import Foreign.ForeignPtr as FP
+import System.Directory as D
 
+--import Sound.OSC
 import Signal
+import Util
 
 default (Double, Rational)
-
---type Range = Integer
-
-
 
 data TLinfo = TLinfo {infoDur::Time,
                       infoSR::Int,
@@ -24,14 +23,13 @@ data TLinfo = TLinfo {infoDur::Time,
                      }
               deriving (Eq, Show)
 
-data TimeLine = TimeLine {tlSig::Signal Double,
+data TimeLine = TimeLine {tlSig::Signal Value,
                           tlInfo::TLinfo}
 
 
-defaultSR = 700
-
+defaultSampleRate = 700
 defaultInfo :: Time -> String -> TLinfo
-defaultInfo dur name = TLinfo dur defaultSR 1 name 
+defaultInfo dur name = TLinfo dur defaultSampleRate 1 name 
 
 --Takes a TLinfo and returns the ReadWrite handle to a file
 openHandle :: TLinfo -> IO SF.Handle
@@ -41,122 +39,65 @@ openHandle (TLinfo dur sr chan param) = SF.openFile filename SF.ReadWriteMode in
               numFrames = floor $ dur * fromIntegral sr
               info = SF.Info numFrames sr 1 format 1 True
 
+closeHandle :: SF.Handle -> IO()
+closeHandle h = SF.hClose h
 
-
-fromToIn :: (Fractional a, Enum a) => a -> a -> Int -> [a]
-fromToIn lo hi steps = [lo, lo+step .. hi]
-  where
-    range = hi - lo
-    step = range / (fromIntegral steps)
-
-{-
-getArray :: TimeLine -> [Value]
-getArray (TimeLine (Signal f) info) = map f samples
-  where samples = let numFrames = round $ dur * (fromIntegral $ infoSR info)
-                  in  map (\x -> f x) (take numFrames [0, 1..])
--}
-
-getArray :: TimeLine -> [Value]
-getArray (TimeLine sig info@(TLinfo dur sr _ _)) = map f domain
+--Render the TimeLine over 
+getVals :: TimeLine -> [Value]
+getVals (TimeLine sig info@(TLinfo dur sr _ _)) = map f domain
   where f = valueAt sig
-        numFrames = dur * fromIntegral sr
-        step = 1/(dur * fromIntegral sr)
-        domain = [0, 0+step .. 1]
+        numFrames = floor $ dur * fromIntegral sr
+        domain = fromToIn 0 1 numFrames
 
 
+--Takes a TimeLine and returns a Pointer to an array of its values
+getArrayPtr :: TimeLine -> IO (Ptr Value)
+getArrayPtr tl = do
+  ptr <-  MA.newArray $ getVals tl
+  return ptr
+  
+--Takes a TimeLine, writes it to a file, and returns number of frames written
 writeTL :: TimeLine -> IO Int
 writeTL tl@(TimeLine sig info) = do
   let fileName = infoParam info ++ ".w64"
-  IO.openFile fileName IO.ReadWriteMode
+      numFrames = floor $ infoDur info * (fromIntegral $ infoSR info)
+  --IO.openFile fileName IO.ReadWriteMode
   h <- openHandle info
-  arrayPtr <- MA.newArray $ getArray tl
-  framesWritten <- SF.hPutBuf h arrayPtr $ infoSR info
-  SF.hClose h
-  return  framesWritten
- 
+  arrayPtr <- getArrayPtr tl
+  framesWritten <- SF.hPutBuf h arrayPtr numFrames --infoSR info
+  closeHandle h
+  return framesWritten
 
---writeSignal :: Signal Double -> TLinfo -> IO()
+--Prototype UI, takes a time function and writes it to a file with dummy name
+s :: (Time -> Value) -> IO Int
+s sf = do
+  let info = Lib.defaultInfo (3*60) "aTest"
+      tl = TimeLine (Signal sf) info
+  writeTL tl 
 
-
-{-
-
-
-
-writeSignal :: Signal Double -> TLinfo -> IO()
-writeSignal (Signal sf) info =  do
-        let numFrames = floor $ (infoDur info) * (fromIntegral $ infoSR info)
-            domain =  map fromIntegral $ take numFrames [0::Int, 1..]
-            array = map sf $ map (\t -> t * infoDur info / fromIntegral numFrames) domain
-            fileName = infoParam info ++ ".w64"
-            format = Format HeaderFormatW64 SampleFormatDouble EndianFile
-            fileInfo = Info numFrames (infoSR info) 1 format 1 True
-        IO.openFile fileName IO.ReadWriteMode
-        hout <- SF.openFile fileName SF.ReadWriteMode fileInfo
-        arrayPtr <- MA.newArray array
-        framesWritten <- SF.hPutBuf hout arrayPtr numFrames
-        print framesWritten
-        SF.hClose hout
-        return ()
-
-write = do
-  writeSignal testSignal testInfo
-
--}
-
-{-
-
-
-
-
-someFunc :: IO()
-someFunc = do
-  let rate = 300
-      dur = 5
-      fileName = "testFile.w64"
-      format = Format HeaderFormatW64 SampleFormatDouble EndianFile
-      info = Info frames rate 1 format 1 True
-      tlInfo = TLInfo dur rate "cutoff"
-      
-  IO.openFile fileName IO.ReadWriteMode -- open/make empty file
-  hout <- SF.openFile fileName SF.ReadWriteMode info -- open a write handle
+testSig = \t ->
+  switch t 0 0.3 * sin (2*pi* zto1 t 0 0.3) +
+  switch t 0.3 0.9 * sin (8*pi* zto1 t 0.3 0.9) +
+  switch t 0.9 1 * sin (16*pi* zto1 t 0.9 1)
   
-  arrayPtr <- MA.newArray $ getArray tlInfo (\x -> sin x)
-  report <- SF.hPutBuf hout arrayPtr (toInteger $ dur * rate)
-  print report
-  SF.hClose hout -- close handle
-  return ()
+
+--s testSig
 
 
--}
 
+--Takes Time and a start and end point and goes from 0 to 1 while Time
+--travels between those two points, returning 0 otherwise.
+zto1 :: (Floating a, Ord a) => a -> a -> a -> a
+zto1 t s e
+  | t < s = 0
+  | t > e = 0
+  | otherwise = (t - s) / (e - s)
 
-someFunc :: IO ()
-someFunc = do
-  let rate = 700
-      frames = rate*60
-      fileName = "testFile.w64"
-      format = Format HeaderFormatW64 SampleFormatDouble EndianFile
-      info = Info frames rate 1 format 1 True
-      
-  IO.openFile fileName IO.ReadWriteMode -- open/make empty file
-  hout <- SF.openFile fileName SF.ReadWriteMode info -- open a write handle
-  
-  --buff <- SF.hGetBuffer hout frames
-  -- writeNum <- SF.hPutBuf hout () 512
-  
-  --let function x = sin x * sin $ x*0.5
-      --phasor = [x/frames | x <- take frames [0, 1..]::[Double]]
-      --array = map function phasor
+--
+switch :: Time -> Time -> Time -> Value
+switch t lo hi = if lo <= t && t <= hi
+                 then 1
+                 else 0
 
-  let array = [2.0 * (sin x) | x <- take frames [0, 1..]]::[Double]
-  --foreignPtr <- FP.newForeignPtr_ arrayPtr
-  --buff <- SF.fromForeignPtr foreignPtr 0 1000
-  --report <- SF.hPutBuffer hout buff
-  arrayPtr <- MA.newArray array
-  report <- SF.hPutBuf hout arrayPtr frames
-  print report
-  SF.hClose hout -- close handle
-  return ()
-
-  
-  
+--someFunc :: IO ()
+--someFunc = do
