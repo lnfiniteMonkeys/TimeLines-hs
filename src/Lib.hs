@@ -1,6 +1,4 @@
-module Lib
-    ( someFunc
-    ) where
+module Lib  where
 
 --import Control.Concurrent
 import Sound.File.Sndfile as SF
