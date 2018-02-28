@@ -112,8 +112,6 @@ testFunc t = sin t
 anotherFunc :: Value -> Value
 anotherFunc a = a + 2
 
-
-{-
 --Num instance for single-argument functions
 instance Num b => Num (a -> b) where
       negate      = fmap negate
@@ -123,7 +121,7 @@ instance Num b => Num (a -> b) where
       abs         = fmap abs
       signum      = fmap signum
 
-combo = sin + cos
--}
+--combo = sin + cos
+
 
 
