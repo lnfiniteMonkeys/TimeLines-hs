@@ -2,6 +2,8 @@ import Lib
 import Signal
 import Data.Fixed
 
+--import Soun.OSC
+
 fract t = snd $ properFraction t
 rand t = fract $ 987654321 * sin $ t*10000
 scale v lo hi = lo + v*hi
@@ -33,9 +35,10 @@ main = do
       reps = 16
       notes = fromList [1..16]
       n = fromList [0, 0, 3, 7,  8, 8, 11, 7,  3, 3, 2, 8,  7, 7, 3, 2]
-  --    
+  --  
   s "amp" $ \t -> let t' = wrap01 (t*reps)
                       f = t' * (d/reps)
+                      
                       atk = lerp 0.01 0.08 t
                       rel = (d/reps)*0.8
     in env f atk rel 2 2
@@ -43,9 +46,11 @@ main = do
   s "freq" $ \t -> let fund = 200
     in fund * semi $ (valueAt n t)
   --  
-  s "index" $ \t -> let
-    in (valueAt notes t)
+  s "index" $ \t -> let t' = t*d
+                        f = 8
+    in scaleB (sin t'*2*pi * f) 300 400
   --  
   s "ratio" $ \t -> let
-    in scaleB (cos $ t*d*16) 10 40
-  return ()
+    in 4
+    
+  reloadSC

@@ -8,11 +8,14 @@ import Foreign.Ptr
 import Foreign.ForeignPtr as FP
 import System.Directory as D
 
---import Sound.OSC
-import Signal(Time, Value, Signal(..))
+import qualified Sound.OSC as OSC
+import qualified Sound.OSC.FD as FD
+import Signal
 import Util
 
 import Data.Fixed
+
+
 
 default (Double, Rational)
 
@@ -74,7 +77,8 @@ s :: String -> (Time -> Value) -> IO Int
 s name sf = do
   let info = Lib.defaultInfo 10 name
       tl = TimeLine (Signal sf) info
-  writeTL tl 
+  writeTL tl
+  --reloadSC
 
 testSig = \t ->
   switch t 0 0.3 * sin (2*pi* zto1 t 0 0.3) +
@@ -102,3 +106,14 @@ switch :: (Num a, Ord a) => a -> a -> a -> a
 switch t lo hi = if lo <= t && t <= hi
                  then 1
                  else 0
+
+reloadSC :: IO ()
+reloadSC = do
+  let m = OSC.Message "/TimeLines" [OSC.string "reload"]
+  udp <- OSC.openUDP "127.0.0.1" 57120
+  FD.sendOSC udp m
+
+
+
+--send :: OSC.UDP -> OSC.Message -> IO ()
+--send u m = OSC.sendOSC u m
