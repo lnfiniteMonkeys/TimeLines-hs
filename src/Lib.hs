@@ -9,9 +9,8 @@ import Foreign.ForeignPtr as FP
 import System.Directory as D
 
 --import Sound.OSC
-import Signal
+import Signal(Time, Value, Signal(..))
 import Util
-
 
 import Data.Fixed
 

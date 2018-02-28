@@ -13,7 +13,7 @@ fromToIn lo hi steps = [lo, lo+step .. hi]
     range = hi - lo
     step  = range / (fromIntegral steps)
 
-
+--user ehird, https://stackoverflow.com/questions/8502201/remove-file-if-it-exists#8502391
 removeIfExists :: FilePath -> IO ()
 removeIfExists fileName = removeFile fileName `catch` handleExists
   where handleExists e

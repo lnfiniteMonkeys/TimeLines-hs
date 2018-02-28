@@ -46,6 +46,11 @@ instance (Fractional a, Eq a) => Fractional (Signal a) where
   recip        = fmap recip
   fromRational = pure . fromRational
 
+
+--instance (RealFrac a) => RealFrac (Signal a) where
+--floor :: (RealFrac a) => Signal a -> Signal a
+--floor (Signal a) = Signal $ \t -> fromIntegral . Prelude.floor $ a t
+
 --FLOATING
 instance (Floating a, Eq a) => Floating (Signal a) where
   pi    = pure pi
@@ -89,8 +94,6 @@ instance (Num a, Eq a) => Num (Signal a) where
 --s1 = constSig 3
 --s2 = constSig
 
-
-
 sig :: (Time -> a) -> Signal a   
 sig f = Signal $ \t -> f t
 
@@ -101,16 +104,8 @@ fast (Signal sf) (Signal r) = Signal $ \t -> let t' = t * (r t)
 slow :: Signal a -> Signal Time -> Signal a
 slow s r = fast s (1/r) 
 
-
 constSig :: a -> Signal a
 constSig s = Signal $ \_ -> s
-
---testFunc :: Time -> Value
-testFunc t = sin t
-
-
-anotherFunc :: Value -> Value
-anotherFunc a = a + 2
 
 --Num instance for single-argument functions
 instance Num b => Num (a -> b) where
@@ -120,8 +115,4 @@ instance Num b => Num (a -> b) where
       fromInteger = pure . fromInteger
       abs         = fmap abs
       signum      = fmap signum
-
---combo = sin + cos
-
-
 
