@@ -12,6 +12,9 @@ import System.Directory as D
 import Signal
 import Util
 
+
+import Data.Fixed
+
 default (Double, Rational)
 
 data TLinfo = TLinfo {infoDur::Time,
@@ -57,9 +60,10 @@ getArrayPtr tl = do
 --Takes a TimeLine, writes it to a file, and returns number of frames written
 writeTL :: TimeLine -> IO Int
 writeTL tl@(TimeLine sig info) = do
-  let fileName = infoParam info ++ ".w64"
+  let fileName =  infoParam info ++ ".w64"
       numFrames = floor $ infoDur info * (fromIntegral $ infoSR info)
   --IO.openFile fileName IO.ReadWriteMode
+  _ <- removeIfExists fileName -----------------
   h <- openHandle info
   arrayPtr <- getArrayPtr tl
   framesWritten <- SF.hPutBuf h arrayPtr numFrames --infoSR info
@@ -67,9 +71,9 @@ writeTL tl@(TimeLine sig info) = do
   return framesWritten
 
 --Prototype UI, takes a time function and writes it to a file with dummy name
-s :: (Time -> Value) -> IO Int
-s sf = do
-  let info = Lib.defaultInfo (3*60) "aTest"
+s :: String -> (Time -> Value) -> IO Int
+s name sf = do
+  let info = Lib.defaultInfo 10 name
       tl = TimeLine (Signal sf) info
   writeTL tl 
 
@@ -79,8 +83,11 @@ testSig = \t ->
   switch t 0.9 1 * sin (16*pi* zto1 t 0.9 1)
   
 
---s testSig
 
+lerp a b f = a*(1-f) + b * f
+
+
+(%) = mod'
 
 
 --Takes Time and a start and end point and goes from 0 to 1 while Time
@@ -91,11 +98,8 @@ zto1 t s e
   | t > e = 0
   | otherwise = (t - s) / (e - s)
 
---
-switch :: Time -> Time -> Time -> Value
+--Returns 1 for every moment in Time that is within lo and hi, 0 otherwise
+switch :: (Num a, Ord a) => a -> a -> a -> a
 switch t lo hi = if lo <= t && t <= hi
                  then 1
                  else 0
-
---someFunc :: IO ()
---someFunc = do
