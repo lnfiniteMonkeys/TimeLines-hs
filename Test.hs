@@ -30,27 +30,47 @@ fromList xs = Signal $ \t -> let len = fromIntegral $ length xs
 semi s = 2**(s/12)
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 main = do
-  let d = 10
-      reps = 16
-      notes = fromList [1..16]
-      n = fromList [0, 0, 3, 7,  8, 8, 11, 7,  3, 3, 2, 8,  7, 7, 3, 2]
-  --  
+  let d = 5
+      reps = 16*2
+      notes = fromList [1..reps]
+      n = fromList [0, 3, 5, 7,  9, 7, 11, 11,  12, 9, 9, 7,  4, 4, 9, 2]
+      scl = fromList [0, 2.. 16]
+      note = rand . flor . (reps*) 
+  --
   s "amp" $ \t -> let t' = wrap01 (t*reps)
                       f = t' * (d/reps)
                       
-                      atk = lerp 0.01 0.08 t
-                      rel = (d/reps)*0.8
-    in env f atk rel 2 2
+                      atk = scale (rand . flor $ t * reps) 0.001 0.2
+                      rel = (d/reps)*0.2
+    in 0.2 * env f atk rel (lerp 1 3 t) (lerp 4 1 t)
   --  
   s "freq" $ \t -> let fund = 200
     in fund * semi $ (valueAt n t)
   --  
   s "index" $ \t -> let t' = t*d
-                        f = 8
-    in scaleB (sin t'*2*pi * f) 300 400
+                        f = 3
+                        --env = 
+    in scaleB (sin t'*2*pi * f) 30 150
   --  
-  s "ratio" $ \t -> let
-    in 4
+  s "ratio" $ \t -> scale (rand (flor (t * reps/2))) 10 30
     
   reloadSC
