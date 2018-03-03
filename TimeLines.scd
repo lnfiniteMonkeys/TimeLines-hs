@@ -45,10 +45,22 @@ x = Synth(\fm, [
 	\ampBuf, ~amp,
 	\freqBuf, ~freq,
 	\modRBuf, ~ratio,
-	\modABuf, ~index]
+	\modABuf,
+	~index]
 );
 )
 
+
+(
+
+x = Synth(\fm, [
+	\ampBuf, ~amp,
+	\freqBuf, ~freq,
+	\modRBuf, ~ratio,
+	\modABuf,
+	~index]
+);
+)
 
 
 
