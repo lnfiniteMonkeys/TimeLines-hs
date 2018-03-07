@@ -87,8 +87,9 @@ instance (Num a, Eq a) => Num (Signal a) where
 
 
 (.*) :: (Num a, Eq a) => a -> a -> a
-(.*) 0 _ = 3
+(.*) 0 _ = 0
 (.*) a b = a * b
+
 
 
 --s1 = constSig 3
