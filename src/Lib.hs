@@ -1,7 +1,7 @@
 module Lib  where
 
 --import Control.Concurrent
-import Sound.File.Sndfile as SF
+import qualified Sound.File.Sndfile as SF
 import System.IO as IO
 import Foreign.Marshal.Array as MA
 import Foreign.Ptr
@@ -13,70 +13,85 @@ import qualified Sound.OSC.FD as FD
 import Signal
 import Util
 
-import Data.Fixed
+import Prelude as Pr
 
+import Data.Fixed
 
 
 default (Double, Rational)
 
-data TLinfo = TLinfo {infoDur::Time,
-                      infoSR::Int,
-                      infoChannels::Int,
-                      infoParam::String
+-- A timeline (file written to disk) has a start (> 0) and end point,
+-- a samplerate and a string that denotes which parameter of the synth it controls
+data TLinfo = TLinfo {tlStart::Time,
+                      tlEnd::Time,
+                      tlSR::Int,
+                      tlParam::String
                      }
               deriving (Eq, Show)
 
+-- Duration of file to be written and played back
+tlDur :: TLinfo -> Time
+tlDur (TLinfo s e _ _) = e - s
+
+--tlRelStart :: TLinfo -> Time
+--tlRelStart i = 
+
+-- The number of frames that will be written to file
+tlNumFrames :: TLinfo -> Int
+tlNumFrames i = Pr.floor $ tlDur i * fromIntegral (tlSR i)
+
+-- A TimeLine is made up of a signal (defined over infinite time starting from 0)
+-- and a TLinfo, which contains the info needed to write a part of the signal to a file
 data TimeLine = TimeLine {tlSig::Signal Value,
-                          tlInfo::TLinfo}
+                          tlInfo::TLinfo
+                         }
 
 
 defaultSampleRate = 700
-defaultInfo :: Time -> String -> TLinfo
-defaultInfo dur name = TLinfo dur defaultSampleRate 1 name 
+defaultInfo :: Time -> Time -> String -> TLinfo
+defaultInfo s e argName = TLinfo s e defaultSampleRate argName
 
 --Takes a TLinfo and returns the ReadWrite handle to a file
 openHandle :: TLinfo -> IO SF.Handle
-openHandle (TLinfo dur sr chan param) = SF.openFile filename SF.ReadWriteMode info
-        where filename = param ++ ".w64"
-              format = Format HeaderFormatW64 SampleFormatDouble EndianFile
-              numFrames = floor $ dur * fromIntegral sr
-              info = SF.Info numFrames sr 1 format 1 True
+openHandle i = SF.openFile filename SF.ReadWriteMode info
+        where filename = tlParam i ++ ".w64"
+              format = SF.Format SF.HeaderFormatW64 SF.SampleFormatDouble SF.EndianFile
+              info = SF.Info (tlNumFrames i) (tlSR i) 1 format 1 True
 
 closeHandle :: SF.Handle -> IO()
-closeHandle h = SF.hClose h
+closeHandle = SF.hClose
 
---Render the TimeLine over 
+-- Render the TimeLine over the duration specified by the TLinfo
 getVals :: TimeLine -> [Value]
-getVals (TimeLine sig info@(TLinfo dur sr _ _)) = map f domain
+getVals (TimeLine sig info@(TLinfo s e _ _)) = map f domain
   where f = valueAt sig
-        numFrames = floor $ dur * fromIntegral sr
-        domain = fromToIn 0 1 numFrames
+        domain = fromToIn s e $ tlNumFrames info
 
 
 --Takes a TimeLine and returns a Pointer to an array of its values
 getArrayPtr :: TimeLine -> IO (Ptr Value)
 getArrayPtr tl = do
-  ptr <-  MA.newArray $ getVals tl
+  ptr <- MA.newArray $ getVals tl
   return ptr
-  
+
+
 --Takes a TimeLine, writes it to a file, and returns number of frames written
 writeTL :: TimeLine -> IO Int
 writeTL tl@(TimeLine sig info) = do
-  let fileName =  infoParam info ++ ".w64"
-      numFrames = floor $ infoDur info * (fromIntegral $ infoSR info)
+  let fileName = tlParam info ++ ".w64"
   --IO.openFile fileName IO.ReadWriteMode
-  _ <- removeIfExists fileName -----------------
+  _ <- removeIfExists fileName -----------------better way?
   h <- openHandle info
   arrayPtr <- getArrayPtr tl
-  framesWritten <- SF.hPutBuf h arrayPtr numFrames --infoSR info
+  framesWritten <- SF.hPutBuf h arrayPtr $ tlNumFrames info --infoSR info
   closeHandle h
   return framesWritten
 
---Prototype UI, takes a time function and writes it to a file with dummy name
-s :: String -> (Time -> Value) -> IO Int
-s name sf = do
-  let info = Lib.defaultInfo 10 name
-      tl = TimeLine (Signal sf) info
+--Prototype UI, takes a signal and writes it to a file with dummy name
+s :: String -> Signal Value -> IO Int
+s name sig = do
+  let info = defaultInfo 0 5 name
+      tl = TimeLine sig info
   writeTL tl
   --reloadSC
 
@@ -86,7 +101,7 @@ testSig = \t ->
   switch t 0.9 1 * sin (16*pi* zto1 t 0.9 1)
   
 
-
+-- Linear interpolation
 lerp a b f = a*(1-f) + b * f
 
 
