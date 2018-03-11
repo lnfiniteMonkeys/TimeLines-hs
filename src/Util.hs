@@ -6,6 +6,7 @@ import Control.Exception
 import System.IO.Error hiding (catch)
 
 import Data.Fixed
+import Signal
 
 --Range list with number of steps
 fromToIn :: (Fractional a, Enum a) => a -> a -> Int -> [a]
@@ -42,3 +43,32 @@ switch :: (Num a, Ord a) => a -> a -> a -> a
 switch t lo hi = if lo <= t && t <= hi
                  then 1
                  else 0
+
+
+fromList :: [a] -> Signal a
+fromList xs = Signal $ \t -> let len = fromIntegral $ length xs
+                                 index = floor $ t*len
+                             in  xs!!index 
+
+
+semi s = 2**(s/12)
+
+
+fract t = snd $ properFraction t
+rand t = fract $ 987654321 * sin $ t*10000
+scale v lo hi = lo + v*hi
+scaleB v lo hi = scale v' lo hi --for bipolar functions
+  where v' = 1 + 0.5*v
+  
+flor :: RealFrac a => a -> a
+flor s = fromIntegral $ floor s
+
+wrap01 :: RealFrac a => a -> a
+wrap01 s = mod' s 1
+
+
+env t atk rel c1 c2
+  | t > atk + rel = 0
+  | t < atk = (t/atk)**c1
+  | otherwise = (1 - (t-atk)/rel)**c2
+
