@@ -17,6 +17,7 @@ type Value = Double
 data Signal a = Signal {valueAt:: Time -> a}
   deriving Typeable
 
+
 ---------------INSTANCES---------------
 --FUNCTOR
 instance Functor Signal where
@@ -86,7 +87,7 @@ instance (Num a, Eq a) => Num (Signal a) where
       abs         = fmap abs
       signum      = fmap signum
 
-
+-- don't evaluate second term if first term is 0
 (.*) :: (Num a, Eq a) => a -> a -> a
 (.*) 0 _ = 0
 (.*) a b = a * b
