@@ -41,6 +41,7 @@ instance Monad Signal where
   (Signal s) >>= f = Signal $ \t -> let newA = s t
                                         sigB = f newA
                                     in  valueAt sigB t
+                                        
 --FRACTIONAL
 instance (Fractional a, Eq a) => Fractional (Signal a) where
   recip        = fmap recip
@@ -91,10 +92,6 @@ instance (Num a, Eq a) => Num (Signal a) where
 (.*) a b = a * b
 
 
-
---s1 = constSig 3
---s2 = constSig
-
 sig :: (Time -> a) -> Signal a   
 sig f = Signal $ \t -> f t
 
@@ -107,6 +104,15 @@ slow s r = fast s (1/r)
 
 constSig :: a -> Signal a
 constSig s = Signal $ \_ -> s
+
+
+
+
+
+
+
+
+
 
 --Num instance for single-argument functions
 instance Num b => Num (a -> b) where
