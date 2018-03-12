@@ -3,7 +3,45 @@ import Util
 import Data.Fixed
 
 --Sets the current working window to be the first 10 seconds of the piece
-window 0 10
+
+p1 = 0
+p2 = 5
+window p1 p2
+
+s "amp" $ \t -> scaleB (sin (2*pi*t * 3)) 0.01 0.4
+                
+
+  --  
+s "freq" $ \t -> 150
+  
+  --  
+s "index" $ \t -> 150 * sin $ 2*pi * t
+  
+  --  
+s "ratio" $ \t -> 10 + 100 * rand $ 0.0000000002*t
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 --Variables relevant to the whole piece
 let 
@@ -17,30 +55,20 @@ let
 --"s" takes a string for the parameter to control, and a function of
 --time in the form of a lambda. It then evaluates the function for
 --the current global time window, saves it to a file, and reloads it on the server
-s "amp" $ \t ->
-  --local variables relevant only to the current parameter
-  let t' = wrap01 (t*reps)
-      f = t' * (d/reps)
-        
-      atk = scale (rand . flor $ t * reps) 0.002 0.01
-      rel = (d/reps)*0.90
-  in 0.2 * env f atk rel (lerp 1 3 t) (lerp 4 1 t)
-  
-  --  
-s "freq" $ \t ->
-  let fund = 200
-      f = 3
-      lfo = sin $ (t*d)*2*pi*f
-  in 5*lfo + (fund * semi $ valueAt n t)
-  
-  --  
-s "index" $ \t -> let t' = flor $ t*4
-                      f = 200
-  
-  in f * rand t' -- stepping through the pseudo-random function 4 times
-  
-  --  
-s "ratio" $ \t -> scale (rand (flor (t * reps))) 20 80
     
 
 --reloadSC
+
+
+
+
+
+
+
+
+
+
+
+
+
+s "amp" $ \t -> sin t
