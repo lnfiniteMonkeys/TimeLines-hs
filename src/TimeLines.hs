@@ -33,6 +33,11 @@ data TLinfo = TLinfo {infWindow::Window,
               deriving (Eq, Show)
 
 
+-- A TimeLine is made up of a signal (defined over infinite time starting from 0)
+-- and a TLinfo, which contains the info needed to write a part of the signal to a file
+data TimeLine = TimeLine {tlSig::Signal Value,
+                          tlInfo::TLinfo
+                         }
 
 -- Duration of file to be written and played back
 infDur :: TLinfo -> Time
@@ -41,12 +46,6 @@ infDur (TLinfo (s, e) _ _) = e - s
 -- The number of frames that will be written to file
 infNumFrames :: TLinfo -> Int
 infNumFrames i = Pr.floor $ infDur i * fromIntegral (infSR i)
-
--- A TimeLine is made up of a signal (defined over infinite time starting from 0)
--- and a TLinfo, which contains the info needed to write a part of the signal to a file
-data TimeLine = TimeLine {tlSig::Signal Value,
-                          tlInfo::TLinfo
-                         }
 
 
 defaultSampleRate = 700
@@ -76,7 +75,6 @@ getArrayPtr tl = do
   ptr <- MA.newArray $ getVals tl
   return ptr
 
-
 --Takes a TimeLine, writes it to a file, and returns number of frames written
 writeTL :: TimeLine -> IO Int
 writeTL tl@(TimeLine sig info) = do
@@ -89,9 +87,21 @@ writeTL tl@(TimeLine sig info) = do
   closeHandle h
   return framesWritten
 
+
+------TODO-----
 --keeping track of the time window to render each TimeLine over
-globalRefWindow::IORef Window
+globalRefWindow :: IORef Window
 globalRefWindow = undefined
+
+--Updates the global time Window
+window s e = do
+  writeIORef globalRefWindow (s, e)
+  writeAllTimelines
+
+--Renders all timelines with the new Window
+writeAllTimelines = undefined
+--find which parameters are defined, get their signal, render it
+--over the current window, reload buffers
 
 --Prototype UI, takes a parameter name and a signal and writes it to a file
 s :: String -> (Time -> Value) -> IO Int
@@ -107,8 +117,3 @@ reloadSC = do
   let m = OSC.Message "/TimeLines" [OSC.string "reload"]
   udp <- OSC.openUDP "127.0.0.1" 57120
   FD.sendOSC udp m
-
-
-
---send :: OSC.UDP -> OSC.Message -> IO ()
---send u m = OSC.sendOSC u m
