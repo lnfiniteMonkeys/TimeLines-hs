@@ -7,6 +7,7 @@ import Foreign.Marshal.Array as MA
 import Foreign.Ptr
 import Foreign.ForeignPtr as FP
 import System.Directory as D
+import System.IO.Unsafe (unsafePerformIO)
 
 import qualified Sound.OSC as OSC
 import qualified Sound.OSC.FD as FD
@@ -90,12 +91,13 @@ writeTL tl@(TimeLine sig info) = do
 
 ------TODO-----
 --keeping track of the time window to render each TimeLine over
-globalRefWindow :: IORef Window
-globalRefWindow = undefined
+{-# NOINLINE globalWindowRef #-}
+globalWindowRef :: IORef Window
+globalWindowRef = unsafePerformIO $ newIORef (0, 1)
 
 --Updates the global time Window
 window s e = do
-  writeIORef globalRefWindow (s, e)
+  writeIORef globalWindowRef (s, e)
   writeAllTimelines
 
 --Renders all timelines with the new Window
@@ -106,7 +108,7 @@ writeAllTimelines = undefined
 --Prototype UI, takes a parameter name and a signal and writes it to a file
 s :: String -> (Time -> Value) -> IO Int
 s name sig = do
-  currentWindow <- readIORef globalRefWindow
+  currentWindow <- readIORef globalWindowRef
   let info = defaultInfo currentWindow name
       tl = TimeLine (Signal sig) info
   writeTL tl
