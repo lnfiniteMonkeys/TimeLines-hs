@@ -18,6 +18,9 @@ import Prelude as Pr
 
 --
 import Control.Concurrent (forkIO)
+import System.IO.Unsafe (unsafePerformIO)
+
+
 
 import Data.Fixed
 import Data.IORef
@@ -88,34 +91,37 @@ writeTL tl@(TimeLine sig info) = do
   closeHandle h
   return framesWritten
 
-
-------TODO-----
 --keeping track of the time window to render each TimeLine over
 {-# NOINLINE globalWindowRef #-}
 globalWindowRef :: IORef Window
 globalWindowRef = unsafePerformIO $ newIORef (0, 1)
 
 --Updates the global time Window
+window :: Time -> Time -> IO Window
 window s e = do
   writeIORef globalWindowRef (s, e)
-  writeAllTimelines
-
+  return (s, e)
+  
 --Renders all timelines with the new Window
-writeAllTimelines = undefined
+--writeAllTimelines = undefined
 --find which parameters are defined, get their signal, render it
 --over the current window, reload buffers
 
 --Prototype UI, takes a parameter name and a signal and writes it to a file
-s :: String -> (Time -> Value) -> IO Int
+s :: String -> (Time -> Value) -> IO ()
 s name sig = do
   currentWindow <- readIORef globalWindowRef
   let info = defaultInfo currentWindow name
       tl = TimeLine (Signal sig) info
   writeTL tl
+  sendMessage "/TimeLines/reload" name
 
 
-reloadSC :: IO ()
-reloadSC = do
-  let m = OSC.Message "/TimeLines" [OSC.string "reload"]
+sendPlay :: IO ()
+sendPlay = do
+  sendMessage "/TimeLines/play" ""
+
+sendMessage path str = do
+  let m = OSC.Message path [OSC.string str]
   udp <- OSC.openUDP "127.0.0.1" 57120
   FD.sendOSC udp m
