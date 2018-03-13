@@ -68,7 +68,7 @@ closeHandle = SF.hClose
 -- Render the TimeLine over the duration specified by the TLinfo
 getVals :: TimeLine -> [Value]
 getVals (TimeLine sig info@(TLinfo (s, e) _ _)) = map f domain
-  where f = valueAt sig
+  where f = sigFunc sig
         domain = fromToIn s e $ infNumFrames info
 
 
@@ -108,13 +108,13 @@ window s e = do
 --over the current window, reload buffers
 
 --Prototype UI, takes a parameter name and a signal and writes it to a file
-s :: String -> (Time -> Value) -> IO ()
+s :: String -> Signal Value -> IO ()
 s name sig = do
   currentWindow <- readIORef globalRefWindow
   let info = defaultInfo currentWindow name
-      tl = TimeLine (Signal sig) info
-  writeTL tl
+  written <- writeTL $ TimeLine sig info
   sendMessage "/TimeLines/reload" name
+  print written
 
 
 sendPlay :: IO ()

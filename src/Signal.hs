@@ -1,8 +1,7 @@
 module Signal
-  ( Signal(..)
+  (  Signal(..)
     ,Time
-    ,Value
-    ,sig    
+    ,Value    
   ) where
 
 import Data.Typeable
@@ -14,7 +13,7 @@ type Time = Double
 type Value = Double
 
 --A signal of value type a gets constructed by passing a function from time to a
-data Signal a = Signal {valueAt:: Time -> a}
+data Signal a = Signal {sigFunc :: Time -> a}
   deriving Typeable
 
 
@@ -22,7 +21,7 @@ data Signal a = Signal {valueAt:: Time -> a}
 --FUNCTOR
 instance Functor Signal where
 --  fmap f (Signal a) = Signal $ fmap f a
-  fmap f sig = Signal $ f . valueAt sig
+  fmap f sig = Signal $ f . sigFunc sig
   (<$) = fmap . const
 
 --APPLICATIVE
@@ -41,7 +40,7 @@ instance Monad Signal where
   -- :: Signal a -> (a -> Signal b) -> Signal b
   (Signal s) >>= f = Signal $ \t -> let newA = s t
                                         sigB = f newA
-                                    in  valueAt sigB t
+                                    in  sigFunc sigB t
                                         
 --FRACTIONAL
 instance (Fractional a, Eq a) => Fractional (Signal a) where
@@ -70,13 +69,10 @@ instance (Floating a, Eq a) => Floating (Signal a) where
   atanh = fmap atanh
   acosh = fmap acos
 
-{-
-instance (Real a, Ord a) => Real (Signal a) where
-  cosh  = fmap cosh
-  asinh = fmap asinh
-  atanh = fmap atanh
-  acosh = fmap acosh
--}
+-- don't evaluate second term if first term is 0
+(.*) :: (Num a, Eq a) => a -> a -> a
+(.*) 0 _ = 5
+(.*) a b = a * b
 
 --NUM
 instance (Num a, Eq a) => Num (Signal a) where
@@ -87,14 +83,15 @@ instance (Num a, Eq a) => Num (Signal a) where
       abs         = fmap abs
       signum      = fmap signum
 
--- don't evaluate second term if first term is 0
-(.*) :: (Num a, Eq a) => a -> a -> a
-(.*) 0 _ = 0
-(.*) a b = a * b
+--Num instance for single-argument functions
+instance (Num a, Num b, Eq a, Eq b) => Num (a -> b) where
+      negate      = fmap negate
+      (+)         = liftA2 (+)
+      (*)         = liftA2 (.*)
+      fromInteger = pure . fromInteger
+      abs         = fmap abs
+      signum      = fmap signum
 
-
-sig :: (Time -> a) -> Signal a   
-sig f = Signal $ \t -> f t
 
 --Speeds up time for a signal by a factor
 fast :: Signal a -> Signal Time -> Signal a
@@ -106,21 +103,4 @@ slow s r = fast s (1/r)
 constSig :: a -> Signal a
 constSig s = Signal $ \_ -> s
 
-
-
-
-
-
-
-
-
-
---Num instance for single-argument functions
-instance Num b => Num (a -> b) where
-      negate      = fmap negate
-      (+)         = liftA2 (+)
-      (*)         = liftA2 (*)
-      fromInteger = pure . fromInteger
-      abs         = fmap abs
-      signum      = fmap signum
 
