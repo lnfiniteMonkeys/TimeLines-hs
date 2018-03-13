@@ -10,19 +10,23 @@ import TimeLines
 
 p1 = 0
 p2 = 5
-window p1 p2
+--window p1 p2
 
 
-bass = synth FM $ do 
-  s "amp" $ \t -> scaleB (sin (2*pi*t * 3)) 0.01 0.4
+
+--let bpm = 120
+    
+
+bass = do
+  "amp" <>< \t ->
+    10*t
   --  
-  s "freq" $ \t -> 150 + 150*2*sin $ 2*pi*t *20
-  
+  "freq" <>< \t ->
+    150*t
   --  
-  s "index" $ \t -> 1 * sin $ 2*pi * t
-  
+  "index" <>< \t ->
+    200
   --  
-  s "ratio" $ \t -> 10 + 100 * rand $ 0.0000000002*t
+  "ratio" <>< \t ->
+    150
 
-
-synth :: String -> IO Int -> IO()
