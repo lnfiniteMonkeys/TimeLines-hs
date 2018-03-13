@@ -108,13 +108,16 @@ window s e = do
 --over the current window, reload buffers
 
 --Prototype UI, takes a parameter name and a signal and writes it to a file
-s :: String -> Signal Value -> IO ()
+s :: String -> (Time -> Value) -> IO ()
 s name sig = do
   currentWindow <- readIORef globalWindowRef
   let info = defaultInfo currentWindow name
-  written <- writeTL $ TimeLine sig info
+  written <- writeTL $ TimeLine (Signal sig) info
   sendMessage "/TimeLines/reload" name
   print written
+
+(<><) = s
+
 
 
 sendPlay :: IO ()
