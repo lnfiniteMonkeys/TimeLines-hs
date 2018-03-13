@@ -1,2 +1,10 @@
 * TimeLines
-TimeLines is a Haskell library for live-coding music as a function of time. It acts as a front-end to the SuperCollider synthesis server, modulating all parameters of a synth (such as its amplitude, frequency, filter cutoff etc.) over time.
+TimeLines is a real-time environment for live coding music as a function of time. It is embedded in Haskell and currently lives within the Emacs programmable editor. It acts as a front-end to the SuperCollider synthesis server, modulating all parameters of a synth (such as its amplitude, frequency, filter cutoff etc.) over time. One day, you may even be able to use it for CV outputs.
+* Main Concepts
+** Signal
+A Signal of type a is a function from Time to a. All parameters of a synth/audio process are signals; they all vary over time. Some may be periodic, others non-repeating, and some may stay constant for ever, but every moment has a specific value for every parameter associated with it.
+** Timeline
+A timeline is a combination of Signals. Some may always be relevant (i.e. affecting that parameter for every moment in time), while others may only actually affect its behavior at certain times. The combination of all those Signals in a timeline is what determines the overall behavior of that parameter over the whole of time.
+** Window
+A Window is a frame of time. Theoretically, all signals are defined over continuous, infinite time. A global Window determines the time interval over which all signals are being currently evaluated and observed.
+
