@@ -113,7 +113,7 @@ s name sig = do
   currentWindow <- readIORef globalWindowRef
   let info = defaultInfo currentWindow name
   written <- writeTL $ TimeLine (Signal sig) info
-  sendMessage "/TimeLines/reload" name
+  sendMessage "/TimeLines/load" name
   print written
 
 (<><) = s
