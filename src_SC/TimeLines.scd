@@ -8,13 +8,11 @@ OSCdef.freeAll
 SynthDef(\fm, {
 	arg amp, freq, ratio, index;
 
-	var t = In.kr(~t, 1);
-
-	var freq_ = BufRd.kr(1, freq, t, 1);
-	var ratio_ = PlayBuf.kr(1, ratio, t, 1);
-	var index_ = PlayBuf.kr(1, index, t, 1);
+	var freq_ = PlayBuf.kr(1, freq, loop: 1);
+	var ratio_ = PlayBuf.kr(1, ratio, loop: 1);
+	var index_ = PlayBuf.kr(1, index, loop: 1);
 	var mod_ = SinOsc.ar(freq_*ratio_)*index_;
-	var amp_ = PlayBuf.kr(1, amp, t, 1);
+	var amp_ = PlayBuf.kr(1, amp, loop: 1);
 	var sig = SinOsc.ar(freq_ + mod_) * amp_;
 	Out.ar(0, sig!2);
 }).add;
@@ -40,7 +38,10 @@ OSCdef(\TL_play, {
 
 )
 
+NetAddr.localAddr
 
+OSCdef.trace(true);
+OSCdef.trace(false);
 
 ~d[\freq].plot;
 
