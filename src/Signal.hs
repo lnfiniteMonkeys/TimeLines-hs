@@ -4,7 +4,6 @@ module Signal
     ,Value    
   ) where
 
-import Data.Typeable
 import Control.Applicative
 import Prelude
 
@@ -14,8 +13,6 @@ type Value = Double
 
 --A signal of value type a gets constructed by passing a function from time to a
 data Signal a = Signal {sigFunc :: Time -> a}
-  deriving Typeable
-
 
 ---------------INSTANCES---------------
 --FUNCTOR
