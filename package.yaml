@@ -1,13 +1,13 @@
 name:                TimeLines
 version:             0.1.0.0
-github:              "githubuser/TimeLines"
+github:              "lnfiniteMonkeys/TimeLines"
 license:             BSD3
-author:              "Author name here"
+author:              "lnfiniteMonkeys"
 maintainer:          "example@example.com"
-copyright:           "2018 Author name here"
+copyright:           "lnfiniteMonkeys"
 
 extra-source-files:
-- README.md
+- README.org
 - ChangeLog.md
 
 # Metadata used when publishing your package

@@ -1,4 +1,4 @@
-module TimeLines  where
+module TimeLines where
 
 --import Control.Concurrent
 import qualified Sound.File.Sndfile as SF
@@ -42,6 +42,23 @@ data TLinfo = TLinfo {infWindow::Window,
 data TimeLine = TimeLine {tlSig::Signal Value,
                           tlInfo::TLinfo
                          }
+
+
+
+type Synth = String
+
+
+
+--data ParamList = ParamList {plParams :: [String],  }
+
+--synth :: Synth -> (Time -> ParamList) -> IO ()
+--synth sdef f = do
+  
+
+
+
+
+
 
 -- Duration of file to be written and played back
 infDur :: TLinfo -> Time
@@ -119,6 +136,7 @@ s name sig = do
 (<><) = s
 
 
+--bob <- newIORef "bob"
 
 sendPlay :: IO ()
 sendPlay = do
@@ -128,3 +146,12 @@ sendMessage path str = do
   let m = OSC.Message path [OSC.string str]
   udp <- OSC.openUDP "127.0.0.1" 57120
   FD.sendOSC udp m
+
+
+
+
+--synth <- makeSynth "fm"
+
+
+--makeSynth :: String -> IO (String -> IO())
+--makeSynth synthName = 
