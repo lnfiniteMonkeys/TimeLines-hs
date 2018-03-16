@@ -11,6 +11,7 @@ import System.IO.Unsafe (unsafePerformIO)
 
 import qualified Sound.OSC as OSC
 import qualified Sound.OSC.FD as FD
+
 import Signal
 import Util
 
