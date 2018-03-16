@@ -3,7 +3,7 @@
 *** For musicians
 TimeLines is the most customizable, powerful, and versatile sequencer you have come across. It's based on the idea that music is a function of time; meaning that, in its simplest form, music is what emerges as time drives changes in air pressure. TimeLines builds on that by forming all musical structure as an explicit function of time: melodies, rhythms, and all forms of modulation are constructed and controlled by typing simple equations that tell us what value each parameter of an instrument should have for any given moment in time. This allows one to become arbitrarily specific when making music, gaining full control over every aspect of their sound and composition.
 
-Fear not: No calculus required, just addition and multiplication!
+Fear not: No calculus required, just addition, multiplication, and a little bit of programming!
 
 *** For programmers
 TimeLines is a real-time environment for live coding music as a function of time. It is embedded in Haskell and currently lives within the Emacs programmable editor. It acts as a front-end to the SuperCollider synthesis server, modulating all parameters of a synth (such as its amplitude, frequency, filter cutoff etc.) over time by evaluating simple mathematical equations over time. 
