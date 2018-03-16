@@ -1,6 +1,6 @@
 import Context
 
---Below is what currently works
+--Below is what currently works, using intero for syntax highlighting and commint with the interpreter
 
 
 p1 = 0
@@ -54,7 +54,7 @@ from t that's available to all parameters of a synth (e.g. t' = wrap01 $ t*10)
 
 
 
--- This is an example of how I think it can be improved (random code, doesn't run)
+-- Below is an example of how I think it can be improved (random code, doesn't run)
 bass = synth "fm" $ \t -> --one t for all parameters in a synth (ideally multiple synths too)
     let somestuff = 3
         someOtherstuff = 10
@@ -66,6 +66,7 @@ bass = synth "fm" $ \t -> --one t for all parameters in a synth (ideally multipl
                + onAt 3.5 15.0 t $ 100 * sin $ t*20
 --being able to stack vertically like above would be great, allows to conceptually separate parts
 --that don't affect the parameters at overlapping time intervals and to avoid parens
+--perhaps possible by parsing each parameter's equation and removing the newlines?
     "freq"  <><  let fund = 500
                      semitones = indexList [0, 1, 2, 3, 4, 5, 6, 7] t
                  in  fund*semitones
@@ -81,15 +82,15 @@ bass = synth "fm" $ \t -> --one t for all parameters in a synth (ideally multipl
 {-
 Notes:
 -ideally, the bulk of functions/composition would be happen at the top of the synth,
-so as to keep the actual parameter equations as simple as possible
+so as to keep the actual parameter equations as simple and high-level as possible
 
 -"synth" should take a synthdef name, and a function of time that has multiple
 parameter components (something like synth :: SynthDef -> [Signal] -> IO() ?).
 
 - the synth name (in this case "bass") should be used to refer to the nodeID of the synth running
-and added to a global list of "working synths", so that when the global Window changes the synth
-would be updated by simply calling "bass" (which has type IO())in the interpreter, which would re-render
-the buffers using the new window
+and added to a global list of "working synths", so that when the global Window changes it can update
+all synths by sending their names (in this case "bass", which has type IO()) to the interpreter, which would re-rendr
+and load all parameter buffers using the new window.
 
 -the function that sends the OSC (either "bass" or the individual (<><)s) should be aware of the synth name
 so that SC knows which nodeID to apply the amp, freq etc arguments to. Is this the writer monad?
