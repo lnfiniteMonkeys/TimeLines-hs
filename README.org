@@ -1,10 +1,24 @@
-* TimeLines
-TimeLines is a real-time environment for live coding music as a function of time. It is embedded in Haskell and currently lives within the Emacs programmable editor. It acts as a front-end to the SuperCollider synthesis server, modulating all parameters of a synth (such as its amplitude, frequency, filter cutoff etc.) over time. One day, you may even be able to use it for CV outputs.
+* TimeLines [WIP]
+
+*** For musicians
+TimeLines is the most customizable, powerful, and versatile sequencer you have come across. It's based on the idea that music is a function of time; meaning that, in its simplest form, music is what emerges as time drives changes in air pressure. TimeLines builds on that by forming all musical structure as an explicit function of time: melodies, rhythms, and all forms of modulation are constructed and controlled by typing simple equations that tell us what value each parameter of an instrument should have for any given moment in time. This allows one to become arbitrarily specific when making music, gaining full control over every aspect of their sound and composition.
+
+Fear not: No calculus required, just addition and multiplication!
+
+*** For programmers
+TimeLines is a real-time environment for live coding music as a function of time. It is embedded in Haskell and currently lives within the Emacs programmable editor. It acts as a front-end to the SuperCollider synthesis server, modulating all parameters of a synth (such as its amplitude, frequency, filter cutoff etc.) over time by evaluating simple mathematical equations over time. 
+
+At the moment, TimeLines is used as the "brains" of the SuperCollider synthesis engine, a completely modular environment for building and connecting sound synthesis and editing processes. One day, you may even be able to use it for MIDI and CV outputs, allowing to take full control over your hardware synths.
+
 ** Main Concepts
 *** Signal
-A Signal of type a is a function from Time to a. All parameters of a synth/audio process are signals; they all vary over time. Some may be periodic, others non-repeating, and some may stay constant for ever, but every moment has a specific value for every parameter associated with it.
+A Signal is a function from Time to a Value. The parameters of a synth/audio process can be thought of as signals; they all vary over time. Some may be periodic, others non-repeating, and some may stay constant for ever, but every moment has a specific value for every parameter associated with that synth.
 *** Timeline
-A timeline is a combination of Signals. Some may always be relevant (i.e. affecting that parameter for every moment in time), while others may only actually affect its behavior at certain times. The combination of all those Signals in a timeline is what determines the overall behavior of that parameter over the whole of time.
+A timeline is a combination of Signals. Some may always be relevant (i.e. affecting that parameter for every moment in time), while others may only actually affect its behavior at certain times. The combination of all those Signals in a timeline is what determines the overall behavior of that parameter over the whole of time. Theoretically, each timeline is an equation that will yield a value no matter what time you plug into it.
 *** Window
-A Window is a frame of time. Theoretically, all signals are defined over continuous, infinite time. A global Window determines the time interval over which all signals are being currently evaluated and observed.
+A Window is a frame of time. All signals are defined over continuous, infinite time. A global Window determines the time interval over which all signals are being currently evaluated and observed. Without a Window, nothing actually gets calculated, everything is hypothetical (and completely deterministic, so you can be sure that evaluating the same function over the same window will always yield the same results).
+
+If you are familiar with DAWs, you can think of a Window as a section of the piece you are currently working on, which is usually looped to monitor changes to it while they're applied.
+
+If you are more familiar with programming, you can think of the window as the viewport in a game: the code to put together a whole level already exists, but at any given moment there is only a certain window that has to be loaded and rendered, the one that the player sees. Everything else remains in the hypothetical realm, ready to be assembled when the time is right.
 
