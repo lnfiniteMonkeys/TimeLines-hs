@@ -21,10 +21,12 @@ import Prelude as Pr
 import Control.Concurrent (forkIO)
 import System.IO.Unsafe (unsafePerformIO)
 
-
+import Control.Monad.Reader
 
 import Data.Fixed
 import Data.IORef
+
+
 default (Double, Rational)
 
 type Window = (Time, Time)
@@ -125,34 +127,38 @@ window s e = do
 --find which parameters are defined, get their signal, render it
 --over the current window, reload buffers
 
---Prototype UI, takes a parameter name and a signal and writes it to a file
-s :: String -> (Time -> Value) -> IO ()
-s name sig = do
+writeParamFile :: String -> (Time -> Value) -> IO()
+writeParamFile name sig = do
   currentWindow <- readIORef globalWindowRef
   let info = defaultInfo currentWindow name
   written <- writeTL $ TimeLine (Signal sig) info
-  sendMessage "/TimeLines/load" name
-  print written
+  return ()
 
-(<><) = s
+sendUpdateMsg :: String -> IO()
+sendUpdateMsg filename = sendMessage "/TimeLines/load" filename
 
+sendParam :: String -> (Time -> Value) -> ReaderT String IO ()
+sendParam p sig = do
+  synthName <- ask
+  let filename = synthName++"_"++p
+  liftIO $ writeParamFile filename sig
+  liftIO $ sendUpdateMsg filename
 
---bob <- newIORef "bob"
+(<><) = sendParam
+
+type SynthDef = String
+type SynthName = String
+
+synth :: SynthName -> SynthDef -> ReaderT String IO() -> IO()
+synth synthName synthDef actions = do
+  runReaderT actions synthName
 
 sendPlay :: IO ()
 sendPlay = do
   sendMessage "/TimeLines/play" ""
 
+
 sendMessage path str = do
   let m = OSC.Message path [OSC.string str]
   udp <- OSC.openUDP "127.0.0.1" 57120
   FD.sendOSC udp m
-
-
-
-
---synth <- makeSynth "fm"
-
-
---makeSynth :: String -> IO (String -> IO())
---makeSynth synthName = 
