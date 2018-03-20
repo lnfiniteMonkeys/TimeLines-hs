@@ -24,6 +24,7 @@ dependencies:
 - hsndfile
 - hosc
 - directory
+- mtl
 
 library:
   source-dirs: src
