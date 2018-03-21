@@ -127,36 +127,41 @@ window s e = do
 --find which parameters are defined, get their signal, render it
 --over the current window, reload buffers
 
+--Render a timeline over the current window and write it to a file
 writeParamFile :: String -> (Time -> Value) -> IO()
 writeParamFile name sig = do
   currentWindow <- readIORef globalWindowRef
   let info = defaultInfo currentWindow name
-  written <- writeTL $ TimeLine (Signal sig) info
+  framesWritten <- writeTL $ TimeLine (Signal sig) info
   return ()
 
+--Send SC a message to load a certain buffer and update the synth
 sendUpdateMsg :: String -> IO()
 sendUpdateMsg filename = sendMessage "/TimeLines/load" filename
 
+--Read the context of a parameter (i.e. the synth name), write
+--the timeline to a file with the appropriate name, and load it
 sendParam :: String -> (Time -> Value) -> ReaderT String IO ()
 sendParam p sig = do
   synthName <- ask
-  let filename = synthName++"_"++p
+  let filename = synthName++"/"++p
   liftIO $ writeParamFile filename sig
   liftIO $ sendUpdateMsg filename
 
 (<><) = sendParam
 
+
 type SynthDef = String
 type SynthName = String
 
+--
 synth :: SynthName -> SynthDef -> ReaderT String IO() -> IO()
-synth synthName synthDef actions = do
-  runReaderT actions synthName
+synth synthName synthDef params = do
+  runReaderT params synthName
 
 sendPlay :: IO ()
 sendPlay = do
   sendMessage "/TimeLines/play" ""
-
 
 sendMessage path str = do
   let m = OSC.Message path [OSC.string str]

@@ -3,6 +3,8 @@ import Context
 --Below is what currently works, using intero for syntax highlighting and commint with the interpreter
 
 
+
+
 p1 = 0
 p2 = 5
 --the window function modifies a global IORef that's used to determine
