@@ -22,6 +22,7 @@ import Control.Concurrent (forkIO)
 import System.IO.Unsafe (unsafePerformIO)
 
 import Control.Monad.Reader
+import Control.Monad.State
 
 import Data.Fixed
 import Data.IORef
@@ -45,10 +46,6 @@ data TLinfo = TLinfo {infWindow::Window,
 data TimeLine = TimeLine {tlSig::Signal Value,
                           tlInfo::TLinfo
                          }
-
-
-
-type Synth = String
 
 
 
@@ -144,20 +141,82 @@ sendUpdateMsg filename = sendMessage "/TimeLines/load" filename
 sendParam :: String -> (Time -> Value) -> ReaderT String IO ()
 sendParam p sig = do
   synthName <- ask
-  let filename = synthName++"/"++p
+  let filename = "../buffers/"++synthName++"_"++p
   liftIO $ writeParamFile filename sig
   liftIO $ sendUpdateMsg filename
 
 (<><) = sendParam
 
+{-
+synth' :: SynthName -> SynthDef -> StateT Synth IO() -> IO ()
+synth' synthName synthDef params = do
+  put (synthName, synthDef, []::ParamList)
+  evalStateT params
+-}  
 
 type SynthDef = String
 type SynthName = String
+type Param = String
+type ParamList = [Param]
+
+type Synth = (SynthName, SynthDef, ParamList)
+
+
 
 --
 synth :: SynthName -> SynthDef -> ReaderT String IO() -> IO()
 synth synthName synthDef params = do
   runReaderT params synthName
+
+
+
+addParam :: Param -> StateT Synth IO ()
+addParam p = do
+  (sn, sd, pl) <- get
+  put (sn, sd, p:pl)
+
+
+
+
+
+
+{-
+a |= b = synth a b 
+
+type Args = String
+
+type Synth = StateT (SynthName, SynthDef, [Args]) IO ()
+
+snth :: SynthName -> SynthDef -> Synth
+
+{-
+
+
+every 
+-}
+{-
+"perc" |= "fm" $ do
+  "amp" <>< \t -> sin t
+  "freq" <>< \t -> cos t
+-}
+
+
+-}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 sendPlay :: IO ()
 sendPlay = do

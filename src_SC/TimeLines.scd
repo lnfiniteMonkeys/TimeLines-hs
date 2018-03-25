@@ -20,14 +20,19 @@ SynthDef(\fm, {
 ~d = Dictionary.new();
 
 ~func = { |param|
-	var fileName = "/home/carl/code/timelines/" ++ param ++ ".w64";
-	var key = param.asSymbol;
-	~d.add(key -> Buffer.read(s, fileName, action: {|b| x.set(key, b)}));
+	//build path for file to load as buffer
+	var fileName = "/home/carl/code/timelines/" ++ param.asString.drop(3)++".w64";
+	//extract key from filepath and store at dict
+	var n = param.asString.split()[2];
+	var key = n.asSymbol;
+	var synthArg = n.split($_)[1].postln;
+	~d.add(key -> Buffer.read(s, fileName, action: {|b| x.set(synthArg, b)}));
 };
 
 
 OSCdef(\TL_load, {
 	|msg, time, addr, recvPort|
+	msg.postln;
 	~func.(msg[1]);
 }, "/TimeLines/load",).add;
 
@@ -38,28 +43,17 @@ OSCdef(\TL_play, {
 
 )
 
-NetAddr.localAddr
 
-OSCdef.trace(true);
-OSCdef.trace(false);
 
-~d[\freq].plot;
-
-~n = Buffer.read(s, "/home/carl/code/timelines/amp.w64");
-~n.plot
 
 
 (
 x = Synth(\fm);
 )
 
-s.meter
+param.asString.split()[2];
 
-(
-~amp.plot;
-~freq.plot;
-~ratio.plot;
-~index.plot;
-~envTest.plot;
-)
-
+~d[\perc_amp].plot;
+~d[\perc_freq].plot;
+~d[\perc_ratio].plot;
+~d[\perc_index].plot;
