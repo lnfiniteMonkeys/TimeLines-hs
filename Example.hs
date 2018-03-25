@@ -4,6 +4,51 @@ import Context
 
 
 
+window 0 7
+
+
+synth "perc" "fm" $ do
+  "amp" <>< \t -> scaleB 0 0.2 $ sin $ 2*pi*t * (lerp 30 80 $ t/10)                   
+  "freq" <>< \t -> scaleB (cos (2*pi*t *400)) 300 550
+                   + switch 2 20 * sin t
+  "ratio" <>< \t -> 10
+  "index" <>< \t -> 50
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 p1 = 0
 p2 = 5
@@ -71,6 +116,7 @@ bass = synth "fm" $ \t -> --one t for all parameters in a synth (ideally multipl
 --perhaps possible by parsing each parameter's equation and removing the newlines?
     "freq"  <><  let fund = 500
                      semitones = indexList [0, 1, 2, 3, 4, 5, 6, 7] t
+                     notes = semitones + (200* sin(t*2))
                  in  fund*semitones
 --the let..in approach helps organize the mess and
 --keep the actual equations high level

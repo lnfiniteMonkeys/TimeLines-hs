@@ -56,8 +56,8 @@ semi s = 2**(s/12)
 
 fract t = snd $ properFraction t
 rand t = fract $ 987654321 * sin $ t*10000
-scale v lo hi = lo + v*hi
-scaleB v lo hi = scale v' lo hi --for bipolar functions
+scale lo hi v = lo + v*hi
+scaleB lo hi v = scale v' lo hi --for bipolar functions
   where v' = 1 + 0.5*v
   
 flor :: RealFrac a => a -> a
