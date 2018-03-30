@@ -1,9 +1,9 @@
 module Util where
 
-import Prelude hiding (catch)
+import Prelude
 import System.Directory
 import Control.Exception
-import System.IO.Error hiding (catch)
+import System.IO.Error 
 
 import Data.Fixed
 import Signal
@@ -44,18 +44,21 @@ switch t lo hi = if lo <= t && t <= hi
                  then 1
                  else 0
 
-
+{-
 fromList :: [a] -> Signal a
 fromList xs = Signal $ \t -> let len = fromIntegral $ length xs
                                  index = floor $ t*len
                              in  xs!!index 
-
+-}
 
 semi s = 2**(s/12)
 
 
 fract t = snd $ properFraction t
-rand t = fract $ 987654321 * sin $ t*10000
+
+rand :: Time -> Value
+rand t = fract $ 987654321 * (sin $ t*10000)
+
 scale lo hi v = lo + v*hi
 scaleB lo hi v = scale v' lo hi --for bipolar functions
   where v' = 1 + 0.5*v

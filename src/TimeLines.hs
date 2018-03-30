@@ -1,3 +1,4 @@
+
 module TimeLines where
 
 --import Control.Concurrent
@@ -28,7 +29,7 @@ import Data.Fixed
 import Data.IORef
 
 
-default (Double, Rational)
+default (Double)
 
 type Window = (Time, Time)
 
@@ -42,8 +43,8 @@ data TLinfo = TLinfo {infWindow::Window,
 
 
 -- A TimeLine is made up of a signal (defined over infinite time starting from 0)
--- and a TLinfo, which contains the info needed to write a part of the signal to a file
-data TimeLine = TimeLine {tlSig::Signal Value,
+-- and a TLinfo,
+data TimeLine = TimeLine {tlSig::Signal,
                           tlInfo::TLinfo
                          }
 
@@ -51,10 +52,10 @@ data TimeLine = TimeLine {tlSig::Signal Value,
 
 --data ParamList = ParamList {plParams :: [String],  }
 
+
 --synth :: Synth -> (Time -> ParamList) -> IO ()
 --synth sdef f = do
   
-
 
 
 
@@ -67,6 +68,7 @@ infDur (TLinfo (s, e) _ _) = e - s
 -- The number of frames that will be written to file
 infNumFrames :: TLinfo -> Int
 infNumFrames i = Pr.floor $ infDur i * fromIntegral (infSR i)
+
 
 
 defaultSampleRate = 700
@@ -91,7 +93,7 @@ getVals (TimeLine sig info@(TLinfo (s, e) _ _)) = map f domain
 
 
 --Takes a TimeLine and returns a Pointer to an array of its values
-getArrayPtr :: TimeLine -> IO (Ptr Value)
+getArrayPtr :: TimeLine -> IO (Ptr Double)
 getArrayPtr tl = do
   ptr <- MA.newArray $ getVals tl
   return ptr
@@ -162,23 +164,16 @@ type ParamList = [Param]
 type Synth = (SynthName, SynthDef, ParamList)
 
 
-
 --
 synth :: SynthName -> SynthDef -> ReaderT String IO() -> IO()
 synth synthName synthDef params = do
   runReaderT params synthName
 
 
-
 addParam :: Param -> StateT Synth IO ()
 addParam p = do
   (sn, sd, pl) <- get
   put (sn, sd, p:pl)
-
-
-
-
-
 
 {-
 a |= b = synth a b 
