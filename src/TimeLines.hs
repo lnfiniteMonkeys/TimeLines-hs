@@ -161,19 +161,13 @@ type SynthName = String
 type Param = String
 type ParamList = [Param]
 
-type Synth = (SynthName, SynthDef, ParamList)
+type Synth = (SynthName, ParamList)
 
 
 --
-synth :: SynthName -> SynthDef -> ReaderT String IO() -> IO()
-synth synthName synthDef params = do
+synth :: SynthName -> ReaderT String IO() -> IO()
+synth synthName params = do
   runReaderT params synthName
-
-
-addParam :: Param -> StateT Synth IO ()
-addParam p = do
-  (sn, sd, pl) <- get
-  put (sn, sd, p:pl)
 
 {-
 a |= b = synth a b 
