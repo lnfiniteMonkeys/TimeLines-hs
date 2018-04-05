@@ -5,24 +5,48 @@ import Context
 
 
 fromTo s e t = 
-  
 
-window 0 5
+
+saturate v
+  | v < 1 = v
+  | v > 1 = 1
+
+
+sin01 t = 0.5 + 0.5 * sin t
+
+
+sign v
+  |v <= 0 = 0
+  |v > 0 = 1
+  
+sqr = sign . sin
+
+window 0 1
+
+ad = (+)
+mu = (*)
+
+
+
+
 
 
 synth "bob_fm" $ do
-  "amp" <>< \t -> 0.1
-  "freq" <>< \t -> 200 + 25*(sin $ 2*pi*t * 20)
-  "ratio" <>< \t -> 5 + 2 * (rand $ t*0.005)
-  "index" <>< \t -> 100 + 2000*(rand (t*0.1)) * (rand $ t*0.02)
-  "pan" <>< \t -> -0.5
-
+  let n = 16
+      d = 20/n
+  "amp" <>< \t -> 0.03
+  "freq" <>< \t -> 50
+  "ratio" <>< \t -> 20 *(lerp 10 0 (wrap01 $ t* (lerp 0.1 0.35 $ wrap01 $ t*0.00025)))**(mu 0.5 $ rand $ 0.00000000005*t)
+  "index" <>< \t -> 100*(lerp 10 0.001 (ad (-1) $ wrap01 $ t* (lerp 0.2 0.75 $ wrap01 $ t*30.95)))
+  "pan" <>< \t -> 0
 
 synth "fred_fm" $ do
   "amp" <>< \t -> 0.1
-  "freq" <>< \t -> 100  
-  "ratio" <>< \t -> 5
-  "index" <>< \t -> 150
+  "freq" <>< \t -> ad 50 $ 10* (sqr $ t*pi*2*(lerp 0 190.8 (wrap01 (t*0.01))))
+    + (mu 2000 $ lerp 1 0 $ wrap01 $ t+(t*105))
+    + (0)
+  "ratio" <>< \t -> 1
+  "index" <>< \t -> 50
   "pan" <>< \t -> 0.5 + 0.6*(sin $ 2*pi*t * 5 + t)
 
 
