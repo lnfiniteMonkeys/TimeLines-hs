@@ -9,6 +9,7 @@ import Foreign.Ptr
 import Foreign.ForeignPtr as FP
 import System.Directory as D
 import System.IO.Unsafe (unsafePerformIO)
+import System.IO
 
 import qualified Sound.OSC as OSC
 import qualified Sound.OSC.FD as FD
@@ -28,6 +29,7 @@ import Control.Monad.State
 import Data.Fixed
 import Data.IORef
 
+import Debug.Trace
 
 default (Double)
 
@@ -85,6 +87,10 @@ openHandle i = SF.openFile filename SF.ReadWriteMode info
 closeHandle :: SF.Handle -> IO()
 closeHandle = SF.hClose
 
+
+-- withHandle :: TLinfo -> ()
+
+
 -- Render the TimeLine over the duration specified by the TLinfo
 getVals :: TimeLine -> [Value]
 getVals (TimeLine sig info@(TLinfo (s, e) _ _)) = map f domain
@@ -110,10 +116,16 @@ writeTL tl@(TimeLine sig info) = do
   closeHandle h
   return framesWritten
 
+
+
 --keeping track of the time window to render each TimeLine over
 {-# NOINLINE globalWindowRef #-}
 globalWindowRef :: IORef Window
 globalWindowRef = unsafePerformIO $ newIORef (0, 1)
+
+{-# NOINLINE globalUDPRef #-}
+globalUDPRef :: FD.UDP
+globalUDPRef = unsafePerformIO $ OSC.openUDP "127.0.0.1" 57120
 
 --Updates the global time Window
 window :: Time -> Time -> IO Window
@@ -169,49 +181,10 @@ synth :: SynthName -> ReaderT String IO() -> IO()
 synth synthName params = do
   runReaderT params synthName
 
-{-
-a |= b = synth a b 
-
-type Args = String
-
-type Synth = StateT (SynthName, SynthDef, [Args]) IO ()
-
-snth :: SynthName -> SynthDef -> Synth
-
-{-
-
-
-every 
--}
-{-
-"perc" |= "fm" $ do
-  "amp" <>< \t -> sin t
-  "freq" <>< \t -> cos t
--}
-
-
--}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 sendPlay :: IO ()
 sendPlay = do
   sendMessage "/TimeLines/play" ""
 
 sendMessage path str = do
   let m = OSC.Message path [OSC.string str]
-  udp <- OSC.openUDP "127.0.0.1" 57120
-  FD.sendOSC udp m
+  FD.sendOSC globalUDPRef m
