@@ -185,6 +185,9 @@ synth synthName params = do
   runReaderT params synthName
 
 
+reset :: IO()
+reset = sendMessage "/TimeLines/reset" ""
+
 sendPlay :: IO ()
 sendPlay = do
   sendMessage "/TimeLines/play" ""
