@@ -1,27 +1,5 @@
 import Context
 
---Below is what currently works, using intero for syntax highlighting and commint with the interpreter
-
-saturate v
-  | v < 1 = v
-  | v > 1 = 1
-
-
-sin01 t = 0.5 + 0.5 * sin t
-
-
-sign v
-  |v <= 0 = 0
-  |v > 0 = 1
-  
-sqr = sign . sin
-
-window 0 1
-
-ad = (+)
-mu = (*)
-
-
 synth "bob_fm" $ do
   let n = 16
       d = 20/n
@@ -30,6 +8,83 @@ synth "bob_fm" $ do
   "ratio" <>< \t -> 20 *(lerp 10 0 (wrap01 $ t* (lerp 0.1 0.35 $ wrap01 $ t*0.00025)))**(mu 0.5 $ rand $ 0.00000000005*t)
   "index" <>< \t -> 100*(lerp 10 0.001 (ad (-1) $ wrap01 $ t* (lerp 0.2 0.75 $ wrap01 $ t*30.95)))
   "pan" <>< \t -> 0
+
+
+
+
+
+
+
+
+
+
+
+
+window 0 5
+
+reset
+
+env 0.02 2 1.0 1.0 t
+
+
+mul = (*)
+
+synth "bob_fm" $ do
+  "amp" <>< \t -> let n = 8
+                      t' = mul (20/n) $ wrap01 $ t*n
+    in 0.1
+  "freq" <>< \t -> 250
+  "ratio" <>< \t -> 10
+  "index" <>< \t -> 10
+  "pan" <>< \t -> 0
+
+
+
+
+
+synth "fred_fm" $ do
+  "amp" <>< \t -> let n = 8
+                      t' = mul (5/n) $ wrap01 $ t*n
+    in 0.1
+  "freq" <>< \t -> 200 + 200* (t/2)
+  "ratio" <>< \t -> add 10 $ flor $ (200* (rand $ t*0.000000000000001 + 100000))
+  "index" <>< \t -> 1000
+  "pan" <>< \t -> 0
+
+synth "donald_fm" $ do
+  "amp" <>< \t -> let n = 8
+                      t' = mul (5/n) $ wrap01 $ t*n
+    in 0.1
+  "freq" <>< \t -> 150 + 200* (wrap01 $ (t/1)**2)
+  "ratio" <>< \t -> add 10 $ flor $ (200* (rand $ t*0.000000001 + 100000))
+  "index" <>< \t -> 10
+  "pan" <>< \t -> 0
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 synth "fred_fm" $ do
   "amp" <>< \t -> 0.1
