@@ -3,8 +3,11 @@ s.boot;
 OSCdef.freeAll
 
 {PinkNoise.ar(0.1)}.play;
+s.quit
 
+s.freeAll
 
+s.options.outDevi
 s.boot;
 
 
@@ -44,7 +47,7 @@ SynthDef(\sine, {
 ~func = { |param|
 	//build path for file to load as buffer
 	var buffName = param.asString.drop(3).split()[1];
-	var fileName = "/home/carl/code/timelines/buffers/" ++ buffName ++ ".w64";
+	var fileName = "/home/w1n5t0n/code/timelines/buffers/" ++ buffName ++ ".w64";
 
 	var p = buffName.split($_).postln;
 	var synthName = p[0].asSymbol;

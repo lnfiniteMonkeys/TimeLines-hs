@@ -7,41 +7,27 @@ import Context
 fromTo s e t = 
   
 
-window 0 5
+window 0 1
 
 
 synth "bob_fm" $ do
   "amp" <>< \t -> 0.1
-  "freq" <>< \t -> 200 + 25*(sin $ 2*pi*t * 20)
-  "ratio" <>< \t -> 5 + 2 * (rand $ t*0.005)
-  "index" <>< \t -> 100 + 2000*(rand (t*0.1)) * (rand $ t*0.02)
+
+
+synth "bob_fm" $ do
+  "amp" <>< \t -> 0.2 -- + 0.1*(sin $ 2*pi*t *(lerp 3 80 $ wrap01 $ 80*t))
+  "freq" <>< \t -> 100 + (200* rand t)
+  "ratio" <>< \t -> 50 -- (rand $ t*0.005)
+  "index" <>< \t -> 10
   "pan" <>< \t -> -0.5
 
 
 synth "fred_fm" $ do
-  "amp" <>< \t -> 0.1
-  "freq" <>< \t -> 100  
-  "ratio" <>< \t -> 5
-  "index" <>< \t -> 150
-  "pan" <>< \t -> 0.5 + 0.6*(sin $ 2*pi*t * 5 + t)
-
-
-
-synth "bob" "fm" $ do
-  let n = 3
-      phasor t = wrap01 $ t*n      
-  "amp" <>< \t -> let a = 0.2
-                      b = a + 0.1*(sin (2*pi*t*1))
-                      t' = 1/3 * (wrap01 $ t * 3)
-    in 0.8 * (env 0.002 0.2 t' 1 1)
-  "freq" <>< \t -> let t' = wrap01 $ t*(lerp 8 15 (wrap01 t))
-                       f = 200
-                       f' = f + 100*sin $ 2*pi*t * lerp 2 3 (wrap01 t)
-    in 100 + 0.1* f' * t'
-  "ratio" <>< \t -> 2 + rand $ flor $ 4 * sin (2*pi*t*1 + 0.5*(rand $ flor $ t))
-  "index" <>< \t -> let
-    in 500
-
+  "amp" <>< \t -> 0.4*(0.5 + 0.5* sin (2*pi*t*3))
+  "freq" <>< \t -> 100
+  "ratio" <>< \t -> 500
+  "index" <>< \t -> 1 + 2000 * (rand $ 20*t)
+  "pan" <>< \t -> 0
 
 
 
