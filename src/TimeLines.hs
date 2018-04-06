@@ -30,6 +30,7 @@ import Control.Monad.State
 import Data.Fixed
 import Data.IORef
 
+import Debug.Trace
 
 default (Double)
 
@@ -87,6 +88,10 @@ openHandle i = SF.openFile filename SF.ReadWriteMode info
 closeHandle :: SF.Handle -> IO()
 closeHandle = SF.hClose
 
+
+-- withHandle :: TLinfo -> ()
+
+
 -- Render the TimeLine over the duration specified by the TLinfo
 getVals :: TimeLine -> [Value]
 getVals (TimeLine sig info@(TLinfo (s, e) _ _)) = map f domain
@@ -111,6 +116,8 @@ writeTL tl@(TimeLine sig info) = do
   framesWritten <- SF.hPutBuf h arrayPtr $ infNumFrames info --infoSR info
   closeHandle h
   return framesWritten
+
+
 
 --keeping track of the time window to render each TimeLine over
 {-# NOINLINE globalWindowRef #-}

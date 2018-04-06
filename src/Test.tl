@@ -2,33 +2,43 @@ import Context
 
 --Below is what currently works, using intero for syntax highlighting and commint with the interpreter
 
+saturate v
+  | v < 1 = v
+  | v > 1 = 1
 
 
-fromTo s e t = 
+sin01 t = 0.5 + 0.5 * sin t
+
+
+sign v
+  |v <= 0 = 0
+  |v > 0 = 1
   
+sqr = sign . sin
 
 window 0 1
 
+ad = (+)
+mu = (*)
+
 
 synth "bob_fm" $ do
-  "amp" <>< \t -> 0.1
-
-
-synth "bob_fm" $ do
-  "amp" <>< \t -> 0.2 -- + 0.1*(sin $ 2*pi*t *(lerp 3 80 $ wrap01 $ 80*t))
-  "freq" <>< \t -> 100 + (200* rand t)
-  "ratio" <>< \t -> 50 -- (rand $ t*0.005)
-  "index" <>< \t -> 10
-  "pan" <>< \t -> -0.5
-
-
-synth "fred_fm" $ do
-  "amp" <>< \t -> 0.4*(0.5 + 0.5* sin (2*pi*t*3))
-  "freq" <>< \t -> 100
-  "ratio" <>< \t -> 500
-  "index" <>< \t -> 1 + 2000 * (rand $ 20*t)
+  let n = 16
+      d = 20/n
+  "amp" <>< \t -> 0.03
+  "freq" <>< \t -> 50
+  "ratio" <>< \t -> 20 *(lerp 10 0 (wrap01 $ t* (lerp 0.1 0.35 $ wrap01 $ t*0.00025)))**(mu 0.5 $ rand $ 0.00000000005*t)
+  "index" <>< \t -> 100*(lerp 10 0.001 (ad (-1) $ wrap01 $ t* (lerp 0.2 0.75 $ wrap01 $ t*30.95)))
   "pan" <>< \t -> 0
 
+synth "fred_fm" $ do
+  "amp" <>< \t -> 0.1
+  "freq" <>< \t -> ad 50 $ 10* (sqr $ t*pi*2*(lerp 0 190.8 (wrap01 (t*0.01))))
+    + (mu 2000 $ lerp 1 0 $ wrap01 $ t+(t*105))
+    + (0)
+  "ratio" <>< \t -> 1
+  "index" <>< \t -> 50
+  "pan" <>< \t -> 0.5 + 0.6*(sin $ 2*pi*t * 5 + t)
 
 
 
