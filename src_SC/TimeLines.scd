@@ -1,42 +1,90 @@
 s.boot;
-
-OSCdef.freeAll
-
-{PinkNoise.ar(0.1)}.play;
 s.quit
 
-s.freeAll
-
-s.options.outDevi
-s.boot;
+OSCdef.freeAll
+{PinkNoise.ar(0.1)}.play;
 
 
-~synthDict
 
+
+
+~timeSynth.set(\range, 700*5)
+~timeSynth.set(\duration, 5)
 
 (
+~reset = {
+	s.freeAll;
+
+	~mainGrp = Group.new;
+	~reverbGrp = Group.after(~mainGrp);
+	~reverbSynth = Synth.new(
+			\reverb,
+			[
+				\amp, 1,
+				\predelay, 0.1,
+				\revtime, 1.8,
+				\lpf, 4500,
+				\mix, 0.35,
+				\in, ~bus[\reverb],
+				\out, ~out,
+			],
+			~reverbGrp
+		);
+
+	~timeSynth = Synth(\phasor, [\cycleDur, 5, \r, 5*700], ~mainGrp);
+};
+)
+
+(
+s.freeAll;
+
 ~t = Bus.control(s, 1);
+~reverbBus = Bus.audio(s, 2);
+
+SynthDef(\phasor, {
+	arg cycleDur = 1, r = 1;
+	Out.kr(~t, LFSaw.kr(cycleDur.reciprocal).range(0, r));
+}).add;
+
+SynthDef(\reverb, {
+	arg in, predelay=0.1, revtime=1.8,
+	lpf=4500, mix=0.15, amp=1, out=0;
+	var dry, wet, temp, sig;
+	dry = In.ar(in,2);
+	temp = In.ar(in,2);
+	wet = 0;
+	temp = DelayN.ar(temp, 0,2, predelay);
+	16.do{
+		temp = AllpassN.ar(temp, 0.05, {Rand(0.001,0.05)}!2, revtime);
+		temp = LPF.ar(temp, lpf);
+		wet = wet + temp;
+	};
+	sig = XFade2.ar(dry, wet, mix*2-1, amp);
+	Out.ar(out, sig);
+}).add;
 
 SynthDef(\fm, {
 	arg amp, freq, ratio, index, pan;
 
-	var freq_ = PlayBuf.kr(1, freq, loop: 1);
-	var ratio_ = PlayBuf.kr(1, ratio, loop: 1);
-	var index_ = PlayBuf.kr(1, index, loop: 1);
+	var freq_ = BufRd.kr(1, freq, In.kr(~t));
+	var ratio_ = BufRd.kr(1, ratio, In.kr(~t));
+	var index_ = BufRd.kr(1, index, In.kr(~t));
 	var mod_ = SinOsc.ar(freq_*ratio_)*index_;
-	var amp_ = PlayBuf.kr(1, amp, loop: 1);
+	var amp_ = BufRd.kr(1, amp, In.kr(~t));
 	var sig = SinOsc.ar(freq_ + mod_) * amp_;
 
-	var pan_ = PlayBuf.kr(1, pan, loop: 1);
+	var pan_ = BufRd.kr(1, pan, loop: 1);
 	Out.ar(0, Pan2.ar(sig, pan_));
 }).add;
 
 SynthDef(\sine, {
 	arg amp, freq, pan;
 
-	var amp_ = PlayBuf.kr(1, amp, loop: 1);
-	var freq_ = PlayBuf.kr(1, freq, loop: 1);
-	var pan_ = PlayBuf.kr(1, pan, loop: 1);
+	var amp_ = BufRd.kr(1, amp, In.ar(~t));
+	var freq_ = BufRd.kr(1, freq, In.ar(~t));
+	var pan_ = BufRd.kr(1, pan, In.ar(~t));
+
+
 	var sig = SinOsc.ar(freq_) * amp_;
 	Out.ar(0, Pan2.ar(sig, pan_));
 }).add;
@@ -66,16 +114,29 @@ OSCdef(\TL_load, {
 	|msg, time, addr, recvPort|
 	msg.postln;
 	~func.(msg[1]);
-}, "/TimeLines/load",).add;
+}, "/TimeLines/load").add;
 
 OSCdef(\TL_play, {
 	|msg, time, addr, recvPort|
 	~func.(msg[1]);
-}, "/TimeLines/play",).add;
+}, "/TimeLines/play").add;
+
+OSCdef(\TL_window, {
+	|msg, time, addr, recvPort|
+	var dur = msg[1].asFloat;
+	var sr = 700;
+	var numFrames = sr*dur;
+
+	dur.class.postln;
+	numFrames.postln;
+	~timeSynth.set(
+		\cycleDur, dur,
+		\r, numFrames);
+}, "/TimeLines/window").add;
 
 )
 
-
+s.sampleRate
 
 (
 SynthDef(\test, {Out.ar(0, 0)}).add;
@@ -104,3 +165,13 @@ param.asString.split()[2];
 ~d[\perc_freq].plot;
 ~d[\perc_ratio].plot;
 ~d[\perc_index].plot;
+
+
+
+~buffDict[\fred_fm_amp].plot
+
+
+~b = Buffer.read(s,"/home/w1n5t0n/code/timelines/buffers/bob_fm_amp.w64" );
+
+
+
