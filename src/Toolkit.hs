@@ -2,11 +2,39 @@ module Toolkit where
 
 import Signal
 
+import Data.Fixed
+
+default (Double)
+
+
+
+--Scales
+mixolydian = [0, 2, 4, 5, 7, 9, 10]
+phrygian = [0, 1, 3, 5, 7, 8, 10]
+dorian = [0, 2, 3, 5, 7, 9, 10]
+harmMinor = [0, 2, 3, 5, 7, 8, 11]
+
+
+andGate v1 v2
+  | v1 == 1 && v2 == 1 = 1
+  | otherwise = 0
+
+orGate v1 v2
+  | v1 ==1 || v2 == 1 = 1
+  | otherwise = 0
+
+semi s = 2**(s/12)
+semis ss = map semi ss
+
 
 fromList :: [Value] -> Time -> Value
 fromList vs t = vs!!index
   where ln = fromIntegral $ length vs
-        index = floor $ t*ln
+        index = floor $ t'*ln
+        t' = clamp 0.0 0.9999999 t
+
+--quant :: [Value] -> Value -> Value
+--quant vls v = 
 
 saturate = clamp 0 1
 
@@ -31,3 +59,55 @@ clamp mn mx = max mn . min mx
 biToUni v = 0.5+0.5*v
 
 uniToBi v = 1 - 2*v
+
+
+(%) = mod'                     
+wrap01 v = mod' v 1
+
+fromTo s e t
+  | t <= 0 = s
+  | t > 1 = e
+  | otherwise = (e*t) + (s *(1-t))
+
+lerp = fromTo
+
+--Example common workflow functions
+
+
+pow = flip (**)
+
+step s t = if (t < s) then 0 else 1
+
+zto1 s e t = saturate $ (t-s)/(e-s)
+
+switch s e t
+  | t < s = 0
+  | t > e = 0
+  | otherwise = 1
+
+
+
+--Simple AD envelope driven by an input t in seconds, increasing from 0
+env :: Value -> Value -> Value -> Value -> Time -> Value
+env atk rel c1 c2 t
+  | t > atk + rel = 0
+  | t < atk = (t/atk)**c1
+  | otherwise = (1 - (t-atk)/rel)**c2
+
+
+{-
+fract v = v - (fromIntegral $ floor v) 
+rand t = fract $ 123456.9 * sin t
+flor v = v - fract v
+-}
+{-
+--ideally this would be used for higher-level realtime 
+let interval = p2-p1
+    numNotes = 8
+    noteDur = interval/numNotes
+    phasor t = wrap01 $ numNotes*(t/interval)
+    semitones = [0, 3, 3, 7, 5, 9, 7, 1]
+    fund = 200
+    ind t = fromIntegral $ (floor $ numNotes*t/interval)%(numNotes)
+    note t = fund * semi $ semitones!!ind (t*2)
+-}

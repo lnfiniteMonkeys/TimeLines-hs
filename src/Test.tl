@@ -1,128 +1,85 @@
 import Context
 
-synth "bob_fm" $ do
-  let n = 16
-      d = 20/n
-  "amp" <>< \t -> 0.03
-  "freq" <>< \t -> 50
-  "ratio" <>< \t -> 20 *(lerp 10 0 (wrap01 $ t* (lerp 0.1 0.35 $ wrap01 $ t*0.00025)))**(mu 0.5 $ rand $ 0.00000000005*t)
-  "index" <>< \t -> 100*(lerp 10 0.001 (ad (-1) $ wrap01 $ t* (lerp 0.2 0.75 $ wrap01 $ t*30.95)))
-  "pan" <>< \t -> 0
 
 
+do
+  let gDur = 120
+  reset
+  window 0 gDur
+  
 
-
-
-
-
-
-
-
-
-
-window 0 5
-
-reset
-
-env 0.02 2 1.0 1.0 t
-
-
-mul = (*)
 
 synth "bob_fm" $ do
-  "amp" <>< \t -> let n = 8
-                      t' = mul (20/n) $ wrap01 $ t*n
-    in 0.1
-  "freq" <>< \t -> 250
-  "ratio" <>< \t -> 10
-  "index" <>< \t -> 10
-  "pan" <>< \t -> 0
-
-
-
-
-
-synth "fred_fm" $ do
-  "amp" <>< \t -> let n = 8
-                      t' = mul (5/n) $ wrap01 $ t*n
-    in 0.1
-  "freq" <>< \t -> 200 + 200* (t/2)
-  "ratio" <>< \t -> add 10 $ flor $ (200* (rand $ t*0.000000000000001 + 100000))
-  "index" <>< \t -> 1000
-  "pan" <>< \t -> 0
-
-synth "donald_fm" $ do
-  "amp" <>< \t -> let n = 8
-                      t' = mul (5/n) $ wrap01 $ t*n
-    in 0.1
-  "freq" <>< \t -> 150 + 200* (wrap01 $ (t/1)**2)
-  "ratio" <>< \t -> add 10 $ flor $ (200* (rand $ t*0.000000001 + 100000))
-  "index" <>< \t -> 10
-  "pan" <>< \t -> 0
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-synth "fred_fm" $ do
-  "amp" <>< \t -> 0.1
-  "freq" <>< \t -> ad 50 $ 10* (sqr $ t*pi*2*(lerp 0 190.8 (wrap01 (t*0.01))))
-    + (mu 2000 $ lerp 1 0 $ wrap01 $ t+(t*105))
-    + (0)
-  "ratio" <>< \t -> 1
-  "index" <>< \t -> 50
-  "pan" <>< \t -> 0.5 + 0.6*(sin $ 2*pi*t * 5 + t)
-
-
-
-
-
-
-
-
-
-
-synth "bob" "fm" $ do
-  let n = 6
-      phasor t = 1/n * (wrap01 $ t*n)
-  "amp" <>< \t -> let a = 0.2
-                      b = a + 0.1*(sin (2*pi*t*1))
-                      t' = 1/3 * (wrap01 $ t * 3)
-    in 0.1
-  "freq" <>< \t -> let t' = wrap01 $ t*(lerp 8 15 (wrap01 t))
-                       f = 200
-                       f1 = f + 1*sin $ 2*pi*t * lerp 2 3 (wrap01 t)
-    in 80 + 5 * (sin $ 2*pi*t*5.5)
-  "ratio" <>< \t -> 0.5 * (scaleB 0.2 1 $ rand $ flor $ t*3.5)
+  "amp" <>< \t -> let
+    in 0.01
+  "freq" <>< \t -> let
+    in 300 * (fromList [1, 3, 4, 2, 2, 1.5, 1.5] $ wrap01 $ t*3)
+       + 150*(fromList [1, 1, 1.5, 1.75, 1.5] $ wrap01 $ t*0.125)
+  "ratio" <>< \t -> let
+    in 10
   "index" <>< \t -> let
-    in 100
+    in 1000 * 1
+  "pan" <>< \t -> 0
+
+
+synth "delia_reverb" $ do
+  "predelay" <>< \t -> 0.5
+  "revtime" <>< \t -> 1.8
+  "lpf" <>< \t -> 1500
+  "mix" <>< \t -> 0.55
+
+
+synth "fred_fm" $ do
+  let n = 16*4
+      d = gDur/n
+      e1  t = env 0.005 3.5 1 5 $ (d*) $ wrap01 $ (t/gDur)*n
+  "amp" <>< \t -> 0.2 * e1 t
+                  + 0.5 * (e1 $ t*0.75)
+                  + 0.3 * (e1 $ t*1.25)
+  "freq" <>< \t -> 100
+  "ratio" <>< \t -> 18
+                    + (0)
+  "index" <>< \t -> 100 * (e1 t)
+                    + 200*(e1 $ t*0.5)
+  "pan" <>< \t -> 0
+
+
+
+synth "lucy_fm" $ do
+  let n = 16*8
+      d = gDur/n
+      e1  t = env 0.005 0.5 1 3 $ (d*) $ wrap01 $ (t/gDur)*n
+  "amp" <>< \t -> let
+    in 0.1
+       + 0
+  "freq" <>< \t -> let
+    in 80
+       + (80*0.0125)*(sin $ 2*pi*t*0.25)
+  "ratio" <>< \t -> let
+    in 2
+       + 0.05*(sin $ 2*pi*t*5)
+  "index" <>< \t -> let
+    in 2000 *(e1 $ t*1.33)
+       + 1000*(e1 $ t*3)
+  "pan" <>< \t -> 0
 
 
 
 
-    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
