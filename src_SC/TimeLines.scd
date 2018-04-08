@@ -5,23 +5,16 @@ OSCdef.freeAll
 {PinkNoise.ar(0.1)}.play;
 
 
-
-
-
-~timeSynth.set(\r, 2000)
-~timeSynth.set(\cycleDur, 2)
-
-
 s.plotTree
 
-
+~reset.();
 
 (
 s.freeAll;
 
 ~t = Bus.audio(s, 1);
 ~reverbBus = Bus.audio(s, 2);
-~out = Bus.audio(s, 2);
+~out = 0;
 
 SynthDef(\phasor, {
 	arg cycleDur = 1, r = 1;
@@ -43,6 +36,7 @@ SynthDef(\reverb, {
 		wet = wet + temp;
 	};
 	sig = XFade2.ar(dry, wet, mix*2-1, amp);
+
 	Out.ar(out, sig);
 }).add;
 
@@ -52,28 +46,13 @@ SynthDef(\fm, {
 	var freq_ = BufRd.kr(1, freq, In.ar(~t));
 	var ratio_ = BufRd.kr(1, ratio, In.ar(~t));
 	var index_ = BufRd.kr(1, index, In.ar(~t));
-	var amp_ = BufRd.kr(1, amp, In.kr(~t));
+	var amp_ = BufRd.kr(1, amp, In.ar(~t));
 	var pan_ = BufRd.kr(1, pan, In.ar(~t));
 
 	var mod = SinOsc.ar(freq_*ratio_)*index_;
 	var sig = SinOsc.ar(freq_ + mod) * amp_;
 
-	Out.ar(0, Pan2.ar(sig, pan_));
-}).add;
-
-SynthDef(\fm2, {
-	arg amp, freq, ratio, index, pan;
-
-	var freq_ = PlayBuf.kr(1, freq, loop: 1);
-	var ratio_ = PlayBuf.kr(1, ratio, loop: 1);
-	var index_ = PlayBuf.kr(1, index, loop: 1);
-	var amp_ = PlayBuf.kr(1, amp, loop: 1);
-	var pan_ = PlayBuf.kr(1, pan, loop: 1);
-
-	var mod = SinOsc.ar(freq_*ratio_)*index_;
-	var sig = SinOsc.ar(freq_ + mod) * amp_;
-
-	Out.ar(0, Pan2.ar(sig, pan_));
+	Out.ar(~reverbBus, Pan2.ar(sig, pan_));
 }).add;
 
 SynthDef(\sine, {
@@ -88,13 +67,10 @@ SynthDef(\sine, {
 	Out.ar(0, Pan2.ar(sig, pan_));
 }).add;
 
-~buffDict = Dictionary.new();
-~synthDict = Dictionary.new();
-
 ~func = { |param|
 	//build path for file to load as buffer
 	var buffName = param.asString.drop(3).split()[1];
-	var fileName = "/home/carl/code/timelines/buffers/" ++ buffName ++ ".w64";
+	var fileName = "/home/w1n5t0n/code/timelines/buffers/" ++ buffName ++ ".w64";
 
 	var p = buffName.split($_).postln;
 	var synthName = p[0].asSymbol;
@@ -103,12 +79,17 @@ SynthDef(\sine, {
 	var synth = ~synthDict[synthName];
 
 	if(synth.isNil, {~synthDict.add(synthName -> Synth(synthDef, target: ~mainGrp))}, {});
-	~buffDict.add(buffName.asSymbol -> Buffer.read(s, fileName, action: {|b| ~synthDict[synthName].set(synthParam, b)}));
+	~buffDict[buffName].free;
+	~buffDict.add(buffName -> Buffer.read(s, fileName, action: {|b| ~synthDict[synthName].set(synthParam, b)}));
 };
 
 
 ~reset = {
 	s.freeAll;
+	Buffer.freeAll;
+	//s.freeAllBuffers;
+	~buffDict = Dictionary.new();
+	~synthDict = Dictionary.new();
 	~timeGrp = Group.new;
 	~mainGrp = Group.after(~timeGrp);
 	~reverbGrp = Group.after(~mainGrp);
@@ -160,46 +141,18 @@ OSCdef(\TL_reset, {
 
 )
 
-
-
-
-
-
-
+s.plotTree
 (
-SynthDef(\test, {Out.ar(0, 0)}).add;
-)
-~dict[\bob].isNildefName;
-
-(
-//~dict = Dictionary.new();
-~info = "bob_something_amp".split($_);
-~key = ~info[0].asSymbol;
-~synthDef = ~info[1];
-~param = ~info[2];
-
-if(~dict[~key].isNil, {~dict.add(~key -> Synth(\fm))});
-if(~dict[~key].defName != ~synthDef, {~dict[~key].free; ~dict.add(~key -> Synth(~synthDef.asSymbol))}, {});
-)
-
-
-(
-x = Synth(\fm);
-)
-
-param.asString.split()[2];
-
-~d[\perc_amp].plot;
-~d[\perc_freq].plot;
-~d[\perc_ratio].plot;
-~d[\perc_index].plot;
+~reverbSynth.set(
+			\amp, 1,
+			\predelay, 1.1,
+			\revtime, 3.8,
+			\lpf, 4500,
+			\mix, 0.4,
+			\in, ~reverbBus,
+			\out, ~out
+);)
 
 
 
-~buffDict[\bob_fm2_amp].plot
-
-
-~b = Buffer.read(s,"/home/w1n5t0n/code/timelines/buffers/bob_fm_amp.w64" );
-
-
-
+~buffDict[\lucy_fm_ratio].plot

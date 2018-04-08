@@ -186,7 +186,11 @@ synth synthName params = do
 
 
 reset :: IO()
-reset = sendMessage "/TimeLines/reset" ""
+reset = do
+  sendMessage "/TimeLines/reset" ""
+  (s, e) <- readIORef globalWindowRef
+  let dur = e - s
+  sendMessage "/TimeLines/window" (show dur)
 
 sendPlay :: IO ()
 sendPlay = do
