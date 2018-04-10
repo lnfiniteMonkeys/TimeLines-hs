@@ -26,7 +26,7 @@ orGate v1 v2
 semi s = 2**(s/12)
 semis ss = map semi ss
 
-
+-- time between 0 and 1
 fromList :: [Value] -> Time -> Value
 fromList vs t = vs!!index
   where ln = fromIntegral $ length vs
@@ -73,7 +73,7 @@ lerp = fromTo
 
 --Example common workflow functions
 
-
+-- pow x $ a + b = (a+b)**x
 pow = flip (**)
 
 step s t = if (t < s) then 0 else 1
