@@ -2,24 +2,60 @@ import Context
 
 
 
+
+reset
+
+window 0 10
+
+
+
 do
   let gDur = 120
   reset
   window 0 gDur
+
+
+
+
+
+
+
+do
+  let 
+  synth "bob_fm" $ do
+    "amp" <>< \t -> let 
+      in 0.0
+    "freq" <>< \t -> let s = semi $ fromList [0, 0, 0, 0, 0, 4] $ wrap01 $ t/10
+      in 100*s
+    "ratio" <>< \t -> let rt = mul 0.5 $ fromList [2, 3] $ wrap01 $ t/10
+      in 9
+    "index" <>< \t -> let rt = mul 2 $ fromList [2, 2, 3, 2, 2, 6] $ wrap01 $ t/5
+      in 3000 * (lerp 1 0 $ pow 0.1 $ wrap01 $ t*8)
+    "pan" <>< \t -> 0
   
 
 
-synth "bob_fm" $ do
-  "amp" <>< \t -> let
-    in 0.01
-  "freq" <>< \t -> let
-    in 300 * (fromList [1, 3, 4, 2, 2, 1.5, 1.5] $ wrap01 $ t*3)
-       + 150*(fromList [1, 1, 1.5, 1.75, 1.5] $ wrap01 $ t*0.125)
-  "ratio" <>< \t -> let
-    in 10
-  "index" <>< \t -> let
-    in 1000 * 1
-  "pan" <>< \t -> 0
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 synth "delia_reverb" $ do
@@ -66,27 +102,6 @@ synth "lucy_fm" $ do
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 p1 = 0
 p2 = 5
 
@@ -100,14 +115,8 @@ g 0
 
 (.>) = flip (.)
 
-:t g
-
-g 3.8
 
 
-:t g
-
-g
 
 
 
@@ -117,49 +126,7 @@ g
 --and update them when the window changes, so that it acts more like a global transport)
 --will also be bound to keyboard shortcut
 
-
-
-
 window 0 10
 
---Example common workflow functions
 
 
-step t s = if (t < s) then 0 else 1
-
-
-
---Simple AD envelope driven by an input t in seconds, increasing from 0
-
-
-env t atk rel e1 e2
-  | t > atk + rel = 0
-  | t < atk = (t/atk)**c1
-  | otherwise = (1 - (t-atk)/rel)**c2
-
-
---ideally this would be used for higher-level realtime 
-let interval = p2-p1
-    numNotes = 8
-    --a coment
-    noteDur = interval/numNotes
-    phasor t = wrap01 $ numNotes*(t/interval)
-    semitones = [0, 3, 3, 7, 5, 9, 7, 1]
-    fund = 200
-    ind t = fromIntegral $ (floor $ numNotes*t/interval)%(numNotes)
-    note t = fund * semi $ semitones!!ind (t*2)
-
-
--- evaluates the functions over the current window (set above), writes
--- them to files, and updates the buffers and synth
-
-
-"amp" <>< \t -> 0.8 * env (noteDur * phasor t) 0.005 (noteDur*0.5) 1.0 2.0
-
-
---  
-"freq" <>< \t -> note t + lerp 0 1 (t/interval)**1 * 100 * (sin $ 2*pi*t *8)
---  
-"index" <>< \t -> 100 + 400 * env (noteDur * phasor t) 0.0 (noteDur*0.9) 1.0 $ lerp 10.0 200.0 (t/interval)
---  
-"ratio" <>< \t -> 10

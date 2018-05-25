@@ -67,20 +67,20 @@ SynthDef(\sine, {
 	Out.ar(0, Pan2.ar(sig, pan_));
 }).add;
 
-~func = { |param|
-	//build path for file to load as buffer
-	var buffName = param.asString.drop(3).split()[1];
-	var fileName = "/home/w1n5t0n/code/timelines/buffers/" ++ buffName ++ ".w64";
+~func = { |path|
+	var filePath = path.asString;
+	var pathList = path.asString.split();
+	var buffName = pathList[pathList.size - 1].split($.)[0];
+	var info = buffName.split($_);
 
-	var p = buffName.split($_).postln;
-	var synthName = p[0].asSymbol;
-	var synthDef = p[1];
-	var synthParam = p[2].asSymbol;
+	var synthName = info[0].asSymbol;
+	var synthDef = info[1];
+	var synthParam = info[2].asSymbol;
 	var synth = ~synthDict[synthName];
 
 	if(synth.isNil, {~synthDict.add(synthName -> Synth(synthDef, target: ~mainGrp))}, {});
 	~buffDict[buffName].free;
-	~buffDict.add(buffName -> Buffer.read(s, fileName, action: {|b| ~synthDict[synthName].set(synthParam, b)}));
+	~buffDict.add(buffName -> Buffer.read(s, filePath, action: {|b| ~synthDict[synthName].set(synthParam, b)}));
 };
 
 
@@ -155,4 +155,18 @@ s.plotTree
 
 
 
-~buffDict[\lucy_fm_ratio].plot
+~buffDict["bob_fm_index"].plot
+
+
+thisProcess.platform
+
+Platform.case(
+	\osx,       { "OSX".postln },
+    \linux,     { "Linux".postln },
+    \windows,   { "Windows".postln }
+);
+
+
+Platform.defaultTempDir
+
+s.meter
