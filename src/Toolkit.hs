@@ -20,32 +20,44 @@ andGate v1 v2
   | otherwise = 0
 
 orGate v1 v2
-  | v1 ==1 || v2 == 1 = 1
+  | v1 == 1 || v2 == 1 = 1
   | otherwise = 0
 
 semi s = 2**(s/12)
 semis ss = map semi ss
 
+--semiList :: [Value] -> Time -> Value
+--semiList ss = semi $ fromList
+
 -- time between 0 and 1
-fromList :: [Value] -> Time -> Value
+fromList :: [a] -> Time -> a
 fromList vs t = vs!!index
   where ln = fromIntegral $ length vs
         index = floor $ t'*ln
         t' = clamp 0.0 0.9999999 t
+        
+
 
 --quant :: [Value] -> Value -> Value
 --quant vls v = 
 
 saturate = clamp 0 1
 
-sin01 t = 0.5 + 0.5 * sin t
 
 sign v
   |v <= 0 = 0
   |v > 0 = 1
+
+-- Bipolar (considering 0)
+sign' v
+  |v == 0 = 0
+  |v < 0 = -1
+  |v > 0 = 1
+
   
 sqr = sign . sin
 
+-- Convenience functions for use with $
 add = (+)
 mul = (*)
 
@@ -60,9 +72,11 @@ biToUni v = 0.5+0.5*v
 
 uniToBi v = 1 - 2*v
 
+sin01 = biToUni . sin
 
 (%) = mod'                     
 wrap01 v = mod' v 1
+mod1 = wrap01
 
 fromTo s e t
   | t <= 0 = s

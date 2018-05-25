@@ -7,7 +7,7 @@ import System.IO as IO
 import Foreign.Marshal.Array as MA
 import Foreign.Ptr
 import Foreign.ForeignPtr as FP
-import System.Directory as D
+import System.Directory as DIR
 import System.IO.Unsafe (unsafePerformIO)
 import System.IO
 
@@ -81,7 +81,7 @@ defaultInfo w argName = TLinfo w defaultSampleRate argName
 --Takes a TLinfo and returns the ReadWrite handle to a file
 openHandle :: TLinfo -> IO SF.Handle
 openHandle i = SF.openFile filename SF.ReadWriteMode info
-        where filename = infParam i ++ ".w64"
+        where filename = infParam i
               format = SF.Format SF.HeaderFormatW64 SF.SampleFormatDouble SF.EndianFile
               info = SF.Info (infNumFrames i) (infSR i) 1 format 1 True
 
@@ -108,7 +108,7 @@ getArrayPtr tl = do
 --Takes a TimeLine, writes it to a file, and returns number of frames written
 writeTL :: TimeLine -> IO Int
 writeTL tl@(TimeLine sig info) = do
-  let fileName = infParam info ++ ".w64"
+  let fileName = infParam info
   --IO.openFile fileName IO.ReadWriteMode
   _ <- removeIfExists fileName -----------------better way?
   h <- openHandle info
@@ -146,8 +146,17 @@ writeParamFile :: String -> (Time -> Value) -> IO()
 writeParamFile name sig = do
   currentWindow <- readIORef globalWindowRef
   let info = defaultInfo currentWindow name
+--  DIR.createDirectoryIfMissing True getTempDir
   framesWritten <- writeTL $ TimeLine (Signal sig) info
   return ()
+
+getTempDirectory :: IO FilePath
+getTempDirectory = do
+  d <- DIR.getTemporaryDirectory
+  return $ d ++ "/TimeLines/buffers/"
+
+
+
 
 --Send SC a message to load a certain buffer and update the synth
 sendUpdateMsg :: String -> IO()
@@ -155,10 +164,10 @@ sendUpdateMsg filename = sendMessage "/TimeLines/load" filename
 
 --Read the context of a parameter (i.e. the synth name), write
 --the timeline to a file with the appropriate name, and load it
-sendParam :: String -> (Time -> Value) -> ReaderT String IO ()
+sendParam :: Param -> (Time -> Value) -> ReaderT SynthID IO ()
 sendParam p sig = do
   synthName <- ask
-  let filename = "../buffers/"++synthName++"_"++p
+  let filename = synthName ++ "_" ++ p ++ ".w64"
   liftIO $ writeParamFile filename sig
   liftIO $ sendUpdateMsg filename
 
@@ -171,18 +180,19 @@ synth' synthName synthDef params = do
   evalStateT params
 -}  
 
-type SynthDef = String
-type SynthName = String
+type SynthID = String
 type Param = String
 type ParamList = [Param]
 
-type Synth = (SynthName, ParamList)
+--type Synth = (SynthName, ParamList)
 
 
 --
-synth :: SynthName -> ReaderT String IO() -> IO()
-synth synthName params = do
-  runReaderT params synthName
+synth :: SynthID -> ReaderT String IO() -> IO()
+synth synthID params = do
+  pathToTemp <- getTempDirectory
+  DIR.createDirectoryIfMissing True pathToTemp
+  runReaderT params $ pathToTemp ++ synthID
 
 
 reset :: IO()
