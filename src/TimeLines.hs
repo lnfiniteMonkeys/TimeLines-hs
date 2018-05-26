@@ -21,7 +21,7 @@ import Util
 import Prelude as Pr
 
 --
-import Control.Concurrent (forkIO)
+import Control.Concurrent (forkIO, ThreadId)
 import System.IO.Unsafe (unsafePerformIO)
 
 import Control.Monad.Reader
@@ -164,12 +164,14 @@ sendUpdateMsg filename = sendMessage "/TimeLines/load" filename
 
 --Read the context of a parameter (i.e. the synth name), write
 --the timeline to a file with the appropriate name, and load it
-sendParam :: Param -> (Time -> Value) -> ReaderT SynthID IO ()
+sendParam :: Param -> (Time -> Value) -> ReaderT SynthID IO ThreadId
 sendParam p sig = do
   synthName <- ask
   let filename = synthName ++ "_" ++ p ++ ".w64"
-  liftIO $ writeParamFile filename sig
-  liftIO $ sendUpdateMsg filename
+  -- Spawn a new thread to write the file and send the update message
+  liftIO $ forkIO $ do
+    writeParamFile filename sig
+    sendUpdateMsg filename
 
 (<><) = sendParam
 
@@ -188,7 +190,7 @@ type ParamList = [Param]
 
 
 --
-synth :: SynthID -> ReaderT String IO() -> IO()
+synth :: SynthID -> ReaderT String IO ThreadId -> IO ThreadId
 synth synthID params = do
   pathToTemp <- getTempDirectory
   DIR.createDirectoryIfMissing True pathToTemp
