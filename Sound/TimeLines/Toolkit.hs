@@ -1,6 +1,6 @@
-module Toolkit where
+module Sound.TimeLines.Toolkit where
 
-import Signal
+import Sound.TimeLines.Signal
 
 import Data.Fixed
 

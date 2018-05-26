@@ -1,4 +1,4 @@
-module Util where
+module Sound.TimeLines.Util where
 
 import Prelude
 import System.Directory
@@ -6,7 +6,7 @@ import Control.Exception
 import System.IO.Error 
 
 import Data.Fixed
-import Signal
+import Sound.TimeLines.Signal
 
 --Range list with number of steps
 fromToIn :: (Fractional a, Enum a) => a -> a -> Int -> [a]
