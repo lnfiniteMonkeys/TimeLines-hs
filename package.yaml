@@ -27,7 +27,13 @@ dependencies:
 - mtl
 
 library:
-  source-dirs: src
+  source-dirs: 
+  exposed-modules:
+    - Sound.TimeLines.Context
+    - Sound.TimeLines.TimeLines
+    - Sound.TimeLines.Signal
+    - Sound.TimeLines.Util
+    - Sound.TimeLines.Toolkit
 
 executables:
   TimeLines-exe:

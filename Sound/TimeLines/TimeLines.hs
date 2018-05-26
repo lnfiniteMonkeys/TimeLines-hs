@@ -1,5 +1,5 @@
 
-module TimeLines where
+module Sound.TimeLines.TimeLines where
 
 --import Control.Concurrent
 import qualified Sound.File.Sndfile as SF
@@ -15,8 +15,8 @@ import System.IO
 import qualified Sound.OSC as OSC
 import qualified Sound.OSC.FD as FD
 
-import Signal
-import Util
+import Sound.TimeLines.Signal
+import Sound.TimeLines.Util
 
 import Prelude as Pr
 

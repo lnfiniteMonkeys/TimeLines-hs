@@ -1,4 +1,4 @@
-module Signal
+module Sound.TimeLines.Signal
   (  Signal(..)
     ,Time
     ,Value
