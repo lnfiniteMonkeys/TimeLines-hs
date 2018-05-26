@@ -1,0 +1,76 @@
+-- This file has been generated from package.yaml by hpack version 0.20.0.
+--
+-- see: https://github.com/sol/hpack
+--
+-- hash: a159a98e1ab6098e04cfac49b0d4163602299467b269e16c625fcb4124e24610
+
+name:           TimeLines
+version:        0.1.0.0
+description:    Please see the README on Github at <https://github.com/githubuser/TimeLines#readme>
+homepage:       https://github.com/lnfiniteMonkeys/TimeLines#readme
+bug-reports:    https://github.com/lnfiniteMonkeys/TimeLines/issues
+author:         lnfiniteMonkeys
+maintainer:     example@example.com
+copyright:      lnfiniteMonkeys
+license:        BSD3
+license-file:   LICENSE
+build-type:     Simple
+cabal-version:  >= 1.10
+
+extra-source-files:
+    ChangeLog.md
+    README.org
+
+source-repository head
+  type: git
+  location: https://github.com/lnfiniteMonkeys/TimeLines
+
+library
+  build-depends:
+      base >=4.7 && <5
+    , directory
+    , hosc
+    , hsndfile
+    , mtl
+  exposed-modules:
+      Sound.TimeLines.Context
+      Sound.TimeLines.TimeLines
+      Sound.TimeLines.Signal
+      Sound.TimeLines.Util
+      Sound.TimeLines.Toolkit
+  other-modules:
+      Paths_TimeLines
+  default-language: Haskell2010
+
+executable TimeLines-exe
+  main-is: Main.hs
+  hs-source-dirs:
+      app
+  ghc-options: -threaded -rtsopts -with-rtsopts=-N
+  build-depends:
+      TimeLines
+    , base >=4.7 && <5
+    , directory
+    , hosc
+    , hsndfile
+    , mtl
+  other-modules:
+      Paths_TimeLines
+  default-language: Haskell2010
+
+test-suite TimeLines-test
+  type: exitcode-stdio-1.0
+  main-is: Spec.hs
+  hs-source-dirs:
+      test
+  ghc-options: -threaded -rtsopts -with-rtsopts=-N
+  build-depends:
+      TimeLines
+    , base >=4.7 && <5
+    , directory
+    , hosc
+    , hsndfile
+    , mtl
+  other-modules:
+      Paths_TimeLines
+  default-language: Haskell2010
