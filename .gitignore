@@ -1,5 +1,6 @@
 .stack-work/
 *~
+*.~
 
 dist
 dist-*
@@ -24,3 +25,4 @@ cabal.project.local
 
 *.w64
 *.hs#
+Sound/TimeLines/*.hs#
