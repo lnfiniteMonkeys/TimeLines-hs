@@ -2,7 +2,7 @@
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: a159a98e1ab6098e04cfac49b0d4163602299467b269e16c625fcb4124e24610
+-- hash: 92ac25830091bd8ced7c92ce8819338dfb9cc08fc0cb0ce0d85aa15ed7127833
 
 name:           TimeLines
 version:        0.1.0.0
@@ -35,7 +35,8 @@ library
   exposed-modules:
       Sound.TimeLines.Context
       Sound.TimeLines.TimeLines
-      Sound.TimeLines.Signal
+      Sound.TimeLines.Types
+      Sound.TimeLines.OSC
       Sound.TimeLines.Util
       Sound.TimeLines.Toolkit
   other-modules:

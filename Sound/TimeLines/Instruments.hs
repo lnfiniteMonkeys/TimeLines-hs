@@ -1,12 +1,10 @@
 module Sound.TimeLines.Toolkit where
 
-import Sound.TimeLines.Signal
+import Sound.TimeLines.Types
 
 import Data.Fixed
 
 default (Double)
-
-
 
 --Scales
 mixolydian = [0, 2, 4, 5, 7, 9, 10]
@@ -37,12 +35,10 @@ fromList vs t = vs!!index
         t' = clamp 0.0 0.9999999 t
         
 
-
 --quant :: [Value] -> Value -> Value
 --quant vls v = 
 
 saturate = clamp 0 1
-
 
 sign v
   |v <= 0 = 0
@@ -60,6 +56,7 @@ sqr = sign . sin
 -- Convenience functions for use with $
 add = (+)
 mul = (*)
+--mul = (*.)
 
 --Ken Perlin, "Texturing and Modeling: A Procedural Approach"
 smoothstep s e t = x*x*x*(x*(x*6-15) + 10)
@@ -90,15 +87,27 @@ lerp = fromTo
 -- pow x $ a + b = (a+b)**x
 pow = flip (**)
 
-step s t = if (t < s) then 0 else 1
+--step p t = if (t < p) then 0 else 1
+-- Takes a point, time, and a value, returning
+-- an identity number before point and the value after
+step0 p t v = if t < p then 0 else v
+step1 p t v = if t < p then 1 else v
 
+steps0 s e t v
+  | (t < s || t > e) = 0
+  | otherwise = v
+
+steps1 s e t v
+  | (t < s || t > e) = 1
+  | otherwise = v
+
+  
 zto1 s e t = saturate $ (t-s)/(e-s)
 
 switch s e t
   | t < s = 0
   | t > e = 0
   | otherwise = 1
-
 
 
 --Simple AD envelope driven by an input t in seconds, increasing from 0
@@ -108,20 +117,8 @@ env atk rel c1 c2 t
   | t < atk = (t/atk)**c1
   | otherwise = (1 - (t-atk)/rel)**c2
 
-
 {-
 fract v = v - (fromIntegral $ floor v) 
 rand t = fract $ 123456.9 * sin t
 flor v = v - fract v
--}
-{-
---ideally this would be used for higher-level realtime 
-let interval = p2-p1
-    numNotes = 8
-    noteDur = interval/numNotes
-    phasor t = wrap01 $ numNotes*(t/interval)
-    semitones = [0, 3, 3, 7, 5, 9, 7, 1]
-    fund = 200
-    ind t = fromIntegral $ (floor $ numNotes*t/interval)%(numNotes)
-    note t = fund * semi $ semitones!!ind (t*2)
 -}

@@ -31,7 +31,8 @@ library:
   exposed-modules:
     - Sound.TimeLines.Context
     - Sound.TimeLines.TimeLines
-    - Sound.TimeLines.Signal
+    - Sound.TimeLines.Types
+    - Sound.TimeLines.OSC
     - Sound.TimeLines.Util
     - Sound.TimeLines.Toolkit
 
