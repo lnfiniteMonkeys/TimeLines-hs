@@ -51,6 +51,19 @@ writeParamFile name sig = do
 sendUpdateMsg :: String -> IO()
 sendUpdateMsg filename = sendMessage "/TimeLines/load" filename
 
+
+--type Signal = Reader Time Value
+
+
+t :: Reader Time Value
+t = do
+  time <- ask
+  return $ time**2
+
+
+
+
+
 --Read the context of a parameter (i.e. the synth name), write
 --the timeline to a file with the appropriate name, and load it
 sendParam :: Param -> (Time -> Value) -> ReaderT SynthID IO ThreadId
