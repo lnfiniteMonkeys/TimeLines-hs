@@ -4,7 +4,7 @@ s.quit
 OSCdef.freeAll
 {PinkNoise.ar(0.1)}.play;
 
-
+Platform.userExtensionDir
 s.plotTree
 
 ~reset.();
@@ -54,6 +54,44 @@ SynthDef(\fm, {
 
 	Out.ar(~reverbBus, Pan2.ar(sig, pan_));
 }).add;
+
+SynthDef(\sawDFM, {
+	arg amp, freq, detune, width, pan, ctf, res, gain;
+
+	var freq_ = BufRd.kr(1, freq, In.ar(~t));
+	var detune_ = BufRd.kr(1, detune, In.ar(~t));
+	var width_ = BufRd.kr(1, width, In.ar(~t));
+	var amp_ = BufRd.kr(1, amp, In.ar(~t));
+	var pan_ = BufRd.kr(1, pan, In.ar(~t));
+	var ctf_ = BufRd.kr(1, ctf, In.ar(~t));
+	var res_ = BufRd.kr(1, res, In.ar(~t));
+	var gain_ = BufRd.kr(1, gain, In.ar(~t));
+
+	var sig = VarSaw.ar(freq_, 0, width_) + VarSaw.ar(freq_*detune_, 0.5, width_);
+	//sig = (sig*pregain_).clip(-1, 1);
+	sig = DFM1.ar(sig, ctf_, res_, gain_) * amp_;
+	Out.ar(~reverbBus, Pan2.ar(sig, pan_));
+}).add;
+
+
+SynthDef(\, {
+	arg amp, freq, detune, width, pan, ctf, res, gain;
+
+	var freq_ = BufRd.kr(1, freq, In.ar(~t));
+	var detune_ = BufRd.kr(1, detune, In.ar(~t));
+	var width_ = BufRd.kr(1, width, In.ar(~t));
+	var amp_ = BufRd.kr(1, amp, In.ar(~t));
+	var pan_ = BufRd.kr(1, pan, In.ar(~t));
+	var ctf_ = BufRd.kr(1, ctf, In.ar(~t));
+	var res_ = BufRd.kr(1, res, In.ar(~t));
+	var gain_ = BufRd.kr(1, gain, In.ar(~t));
+
+	var sig = VarSaw.ar(freq_, 0, width_) + VarSaw.ar(freq_*detune_, 0.5, width_);
+	//sig = (sig*pregain_).clip(-1, 1);
+	sig = DFM1.ar(sig, ctf_, res_, gain_) * amp_;
+	Out.ar(~reverbBus, Pan2.ar(sig, pan_));
+}).add;
+
 
 SynthDef(\sine, {
 	arg amp, freq, pan;
@@ -155,7 +193,7 @@ s.plotTree
 
 
 
-~buffDict["bob_fm_index"].plot
+~buffDict["s2_lpSaw_width"].plot
 
 
 thisProcess.platform
