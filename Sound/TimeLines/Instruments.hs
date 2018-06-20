@@ -1,7 +1,6 @@
-module Sound.TimeLines.Toolkit where
+module Sound.TimeLines.Instruments where
 
 import Sound.TimeLines.Types
-
 import Data.Fixed
 
 default (Double)
@@ -28,7 +27,7 @@ semis ss = map semi ss
 --semiList ss = semi $ fromList
 
 -- time between 0 and 1
-fromList :: [a] -> Time -> a
+fromList :: (RealFrac b) => [a] -> b -> a
 fromList vs t = vs!!index
   where ln = fromIntegral $ length vs
         index = floor $ t'*ln
@@ -69,9 +68,12 @@ biToUni v = 0.5+0.5*v
 
 uniToBi v = 1 - 2*v
 
+sin01 :: (Fractional a, Floating a) => a -> a 
 sin01 = biToUni . sin
 
-(%) = mod'                     
+(%) = mod'
+
+--wrap01 :: (Real a) => Signal a -> Signal a
 wrap01 v = mod' v 1
 mod1 = wrap01
 
@@ -111,7 +113,7 @@ switch s e t
 
 
 --Simple AD envelope driven by an input t in seconds, increasing from 0
-env :: Value -> Value -> Value -> Value -> Time -> Value
+env :: Value -> Value -> Value -> Value -> Value -> Value
 env atk rel c1 c2 t
   | t > atk + rel = 0
   | t < atk = (t/atk)**c1
