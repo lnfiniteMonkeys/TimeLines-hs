@@ -44,19 +44,18 @@ openHandle i = SF.openFile filename SF.ReadWriteMode info
               info = SF.Info (infNumFrames i) (infSR i) 1 format 1 True
 
 
-
 closeHandle :: SF.Handle -> IO()
 closeHandle = SF.hClose
 
 -- Render the TimeLine over the duration specified by the TLinfo
-getVals :: TimeLine -> [Value]
-getVals (TimeLine sig info@(TLinfo (s, e) _ _)) = map f domain
-  where f = sigFunc sig
+getVals :: TimeLine a -> [a]
+getVals (TimeLine sig info@(TLinfo (s, e) _ _)) = map (runSig sig) domain
+  where f = runSig sig
         domain = fromToIn s e $ infNumFrames info
 
 
 --Takes a TimeLine and returns a Pointer to an array of its values
-getArrayPtr :: TimeLine -> IO (Ptr Double)
+getArrayPtr :: TimeLine Double -> IO (Ptr Double)
 getArrayPtr tl = do
   ptr <- MA.newArray $ getVals tl
   return ptr
