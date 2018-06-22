@@ -77,6 +77,7 @@ sin01 = biToUni . sin
 wrap01 v = mod' v 1
 mod1 = wrap01
 
+
 fromTo s e t
   | t <= 0 = s
   | t > 1 = e

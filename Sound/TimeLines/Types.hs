@@ -74,8 +74,10 @@ instance (Floating a, Eq a) => Floating (Signal a) where
   atanh = fmap atanh
   acosh = fmap acosh
 
+
 --instance (Num a, Ord a) => Real (Signal a) where
 --  toRational = 
+
 
 t :: Signal Value
 t = Signal $ \t -> t
@@ -103,7 +105,7 @@ defaultInfo :: Window -> String -> TLinfo
 defaultInfo w argName = TLinfo w defaultSampleRate argName
 
 -- A TimeLine is made up of a signal (defined over infinite time starting from 0)
--- and a TLinfo, which determines which part of the signal we are observing
+-- and a cTLinfo, which determines which part of the signal we are observing
 data TimeLine a = TimeLine {tlSig::Signal a,
                             tlInfo::TLinfo
                            }
@@ -120,4 +122,3 @@ type ParamList = [Param]
 
 --shortcut to use with $ for RHS argument
 mu = (*.)
-
