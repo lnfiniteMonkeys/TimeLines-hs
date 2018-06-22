@@ -47,6 +47,7 @@ openHandle i = SF.openFile filename SF.ReadWriteMode info
 closeHandle :: SF.Handle -> IO()
 closeHandle = SF.hClose
 
+
 -- Render the TimeLine over the duration specified by the TLinfo
 getVals :: TimeLine a -> [a]
 getVals (TimeLine sig info@(TLinfo (s, e) _ _)) = map (runSig sig) domain
