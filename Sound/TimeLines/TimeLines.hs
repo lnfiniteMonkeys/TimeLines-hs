@@ -22,7 +22,7 @@ default (Double)
 
 
 --Takes a TimeLine, writes it to a file, and returns number of frames written
-writeTL :: TimeLine -> IO Int
+writeTL :: TimeLine Double -> IO Int
 writeTL tl@(TimeLine sig info) = do
   let fileName = infParam info
   _ <- removeFileIfExists fileName
@@ -39,12 +39,12 @@ writeTL tl@(TimeLine sig info) = do
 --over the current window, reload buffers
 
 --Render a timeline over the current window and write it to a file
-writeParamFile :: Param -> (Time -> Value) -> IO()
+writeParamFile :: Param -> Signal Double -> IO()
 writeParamFile name sig = do
   currentWindow <- readIORef globalWindowRef
   let info = defaultInfo currentWindow name
 --  DIR.createDirectoryIfMissing True getTempDir
-  framesWritten <- writeTL $ TimeLine (Signal sig) info
+  framesWritten <- writeTL $ TimeLine sig info
   return ()
 
 --Send SC a message to load a certain buffer and update the synth
@@ -66,7 +66,7 @@ t = do
 
 --Read the context of a parameter (i.e. the synth name), write
 --the timeline to a file with the appropriate name, and load it
-sendParam :: Param -> (Time -> Value) -> ReaderT SynthID IO ThreadId
+sendParam :: Param -> Signal Value -> ReaderT SynthID IO ThreadId
 sendParam p sig = do
   synthName <- ask
   let filename = synthName ++ "_" ++ p ++ ".w64"
@@ -78,7 +78,7 @@ sendParam p sig = do
 (<><) = sendParam
 
 --
-synth :: SynthID -> ReaderT String IO ThreadId -> IO ThreadId
+synth :: SynthID -> ReaderT SynthID IO ThreadId -> IO ThreadId
 synth synthID params = do
   pathToTemp <- getTempDirectory
   runReaderT params $ pathToTemp ++ synthID
