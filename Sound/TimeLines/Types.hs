@@ -22,6 +22,8 @@ type Window = (Time, Time)
 
 newtype Signal a = Signal {runSig :: Time -> a}
 
+constSig a = Signal $ \t -> a
+
 ---------------INSTANCES---------------
 --FUNCTOR
 instance Functor Signal where
@@ -31,7 +33,7 @@ instance Functor Signal where
 --APPLICATIVE
 instance Applicative Signal where
   -- Transform a value "a" to a signal of constant value "a"
-  pure a = Signal $ \t -> a
+  pure = constSig
   sf <*> s = Signal $ \t -> (runSig sf t) (runSig s t)
   --liftA2 f s1 s2 = Signal $ \t -> f (runSig s1 t) (runSig s2 t)
   -- A signal with function "f" of type "Time -> (a -> b)", applied at Time "t" to

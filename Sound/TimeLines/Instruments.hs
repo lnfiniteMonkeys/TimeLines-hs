@@ -2,8 +2,13 @@ module Sound.TimeLines.Instruments where
 
 import Sound.TimeLines.Types
 import Data.Fixed
+import Control.Applicative
 
-default (Double)
+
+slow :: Signal Value -> Signal a -> Signal a
+slow (Signal amt) (Signal sf) = Signal $ \t -> sf $ (amt t)*t
+
+
 
 --Scales
 mixolydian = [0, 2, 4, 5, 7, 9, 10]
@@ -11,14 +16,14 @@ phrygian = [0, 1, 3, 5, 7, 8, 10]
 dorian = [0, 2, 3, 5, 7, 9, 10]
 harmMinor = [0, 2, 3, 5, 7, 8, 11]
 
+andGate :: Signal Value -> Signal Value -> Signal Value
+andGate v1 v2 = Signal $ \t ->
+  if (runSig v1 t == 1 && runSig v2 t == 1) then 1 else 0
 
-andGate v1 v2
-  | v1 == 1 && v2 == 1 = 1
-  | otherwise = 0
+orGate :: Signal Value -> Signal Value -> Signal Value
+orGate v1 v2 = Signal $ \t ->
+  if (runSig v1 t == 1 || runSig v2 t == 1) then 1 else 0
 
-orGate v1 v2
-  | v1 == 1 || v2 == 1 = 1
-  | otherwise = 0
 
 semi s = 2**(s/12)
 semis ss = map semi ss
@@ -26,30 +31,43 @@ semis ss = map semi ss
 --semiList :: [Value] -> Time -> Value
 --semiList ss = semi $ fromList
 
+eps = 0.00000001
+
 -- time between 0 and 1
-fromList :: (RealFrac b) => [a] -> b -> a
-fromList vs t = vs!!index
-  where ln = fromIntegral $ length vs
-        index = floor $ t'*ln
-        t' = clamp 0.0 0.9999999 t
-        
+fromList :: (RealFrac b) => [Signal a] -> Signal b -> Signal a
+fromList vs phasor = Signal $ \t ->
+  let ln = fromIntegral $ length vs
+      phVal = clamp 0.0 0.99999999 (runSig phasor t)
+      index = floor $ phVal*ln
+  in  runSig (vs!!index) t
 
 --quant :: [Value] -> Value -> Value
 --quant vls v = 
 
 saturate = clamp 0 1
 
-sign v
-  |v <= 0 = 0
-  |v > 0 = 1
+boolToNum :: (Num a) => Bool -> a
+boolToNum b
+  | b == True = 1
+  | b == False = 0
 
+_sign :: (Num a, Ord a) => a -> a
+_sign v = boolToNum (v <= 0)
 -- Bipolar (considering 0)
-sign' v
-  |v == 0 = 0
-  |v < 0 = -1
-  |v > 0 = 1
 
-  
+_signB :: (Num a, Ord a) => a -> a
+_signB v
+  | v == 0 = 0
+  | v < 0 = -1
+  | v > 0 = 1
+
+sign :: (Ord a, Num a, Functor f) => f a -> f a
+sign s = fmap _sign s
+
+signB :: (Ord a, Num a, Functor f) => f a -> f a
+signB s = fmap _signB s
+
+sqr :: Signal Value -> Signal Value
 sqr = sign . sin
 
 -- Convenience functions for use with $
@@ -71,19 +89,22 @@ uniToBi v = 1 - 2*v
 sin01 :: (Fractional a, Floating a) => a -> a 
 sin01 = biToUni . sin
 
-(%) = mod'
+--s1 % s2 = fmap mod'
+--moduloSig :: (Real a, Functor f) => f a -> f a -> f a
+moduloSig s1 s2 = liftA2 (mod') s1 s2
+s1 % s2 = moduloSig s1 s2
 
---wrap01 :: (Real a) => Signal a -> Signal a
-wrap01 v = mod' v 1
-mod1 = wrap01
+wrap01 s = s % 1
+--mod1 = wrap01
 
-
-fromTo s e t
-  | t <= 0 = s
-  | t > 1 = e
-  | otherwise = (e*t) + (s *(1-t))
-
-lerp = fromTo
+lerp :: (Num a) => Signal a -> Signal a -> Signal a -> Signal a
+lerp s e phsr = Signal $ \t ->
+  let v1 = runSig s t
+      v2 = runSig e t
+      mix = runSig phsr t
+  in  (v1*(1-mix)) + (v2*mix)
+  
+fromTo = lerp
 
 --Example common workflow functions
 

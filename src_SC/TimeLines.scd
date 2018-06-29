@@ -1,3 +1,4 @@
+
 s.boot;
 s.quit
 
@@ -35,7 +36,7 @@ SynthDef(\reverb, {
 		temp = LPF.ar(temp, lpf);
 		wet = wet + temp;
 	};
-	sig = XFade2.ar(dry, wet, mix*2-1, amp);
+	sig = XFade2.ar(dry, wet, mix*2-1, amp) * EnvGate.new;
 
 	Out.ar(out, sig);
 }).add;
@@ -50,7 +51,7 @@ SynthDef(\fm, {
 	var pan_ = BufRd.kr(1, pan, In.ar(~t));
 
 	var mod = SinOsc.ar(freq_*ratio_)*index_;
-	var sig = SinOsc.ar(freq_ + mod) * amp_;
+	var sig = SinOsc.ar(freq_ + mod) * amp_ * EnvGate.new;
 
 	Out.ar(~reverbBus, Pan2.ar(sig, pan_));
 }).add;
@@ -170,3 +171,9 @@ Platform.case(
 Platform.defaultTempDir
 
 s.meter
+
+
+
+a = { LPF.ar(Saw.ar(200), 600) * EnvGate.new }.play;
+a.set(\fadeTime, 2);
+a.release;
