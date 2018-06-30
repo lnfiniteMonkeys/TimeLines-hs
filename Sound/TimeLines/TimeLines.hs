@@ -55,13 +55,6 @@ sendUpdateMsg filename = sendMessage "/TimeLines/load" filename
 --type Signal = Reader Time Value
 
 
-t :: Reader Time Value
-t = do
-  time <- ask
-  return $ time**2
-
-
-
 
 
 --Read the context of a parameter (i.e. the synth name), write

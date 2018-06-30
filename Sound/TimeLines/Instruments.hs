@@ -1,3 +1,5 @@
+--{-# LANGUAGE FlexibleContexts #-}
+
 module Sound.TimeLines.Instruments where
 
 import Sound.TimeLines.Types
@@ -5,10 +7,24 @@ import Data.Fixed
 import Control.Applicative
 
 
+speed :: Signal Value -> Signal a -> Signal a
+speed (Signal amt) (Signal sf) = Signal $ \t -> sf $ (amt t)*t
+fast = speed
+
 slow :: Signal Value -> Signal a -> Signal a
-slow (Signal amt) (Signal sf) = Signal $ \t -> sf $ (amt t)*t
+slow (Signal amt) (Signal sf) = Signal $ \t -> sf $ t/(amt t)
 
+bpmToPhasors :: Signal Value -> Signal Value -> Signal Value -> (Signal Value, Signal Value, Signal Value, Signal Value, Signal Value)
+bpmToPhasors bpm numBeats numBars =
+  let beatDur = 60/bpm
+      barDur = numBeats*beatDur
+      totalDur = barDur*numBars
+      phasorBeat = wrap01 $ t/beatDur
+      phasorBar = wrap01 $ t/barDur
+  in  (phasorBeat, phasorBar, beatDur, barDur, totalDur)
 
+constSigToValue :: Signal a -> a
+constSigToValue (Signal sf) = sf 0
 
 --Scales
 mixolydian = [0, 2, 4, 5, 7, 9, 10]
@@ -24,12 +40,8 @@ orGate :: Signal Value -> Signal Value -> Signal Value
 orGate v1 v2 = Signal $ \t ->
   if (runSig v1 t == 1 || runSig v2 t == 1) then 1 else 0
 
-
 semi s = 2**(s/12)
 semis ss = map semi ss
-
---semiList :: [Value] -> Time -> Value
---semiList ss = semi $ fromList
 
 eps = 0.00000001
 
@@ -41,8 +53,6 @@ fromList vs phasor = Signal $ \t ->
       index = floor $ phVal*ln
   in  runSig (vs!!index) t
 
---quant :: [Value] -> Value -> Value
---quant vls v = 
 
 saturate = clamp 0 1
 
@@ -72,7 +82,8 @@ sqr = sign . sin
 
 -- Convenience functions for use with $
 add = (+)
-mul = (*)
+mul :: (Num a) => Signal a -> Signal a -> Signal a
+mul = liftA2 (*)
 --mul = (*.)
 
 --Ken Perlin, "Texturing and Modeling: A Procedural Approach"
@@ -90,9 +101,9 @@ sin01 :: (Fractional a, Floating a) => a -> a
 sin01 = biToUni . sin
 
 --s1 % s2 = fmap mod'
---moduloSig :: (Real a, Functor f) => f a -> f a -> f a
+moduloSig :: (Real a, Applicative f) => f a -> f a -> f a
 moduloSig s1 s2 = liftA2 (mod') s1 s2
-s1 % s2 = moduloSig s1 s2
+(%) = moduloSig
 
 wrap01 s = s % 1
 --mod1 = wrap01
@@ -103,43 +114,92 @@ lerp s e phsr = Signal $ \t ->
       v2 = runSig e t
       mix = runSig phsr t
   in  (v1*(1-mix)) + (v2*mix)
-  
+
+lerp01 = lerp 0 1
+lerp10 = lerp 1 0
+
 fromTo = lerp
 
---Example common workflow functions
-
 -- pow x $ a + b = (a+b)**x
+pow :: (Floating a, Eq a) => Signal a -> Signal a -> Signal a
 pow = flip (**)
 
 --step p t = if (t < p) then 0 else 1
 -- Takes a point, time, and a value, returning
 -- an identity number before point and the value after
-step0 p t v = if t < p then 0 else v
-step1 p t v = if t < p then 1 else v
 
-steps0 s e t v
-  | (t < s || t > e) = 0
-  | otherwise = v
+step p v = Signal $ \t ->
+  if (t < runSig p t) then 0 else (runSig v t)
 
-steps1 s e t v
-  | (t < s || t > e) = 1
-  | otherwise = v
-
-  
-zto1 s e t = saturate $ (t-s)/(e-s)
-
-switch s e t
-  | t < s = 0
-  | t > e = 0
+--for use with non-signal values
+step' p t
+  | t < p = 0
   | otherwise = 1
 
+step1 p v = Signal $ \t ->
+  if (t < runSig p t) then 1 else (runSig v t)
+
+switch s e v = Signal $ \t ->
+  if (t < runSig s t || t > runSig e t) then 0 else (runSig v t)
+
+switchT s e tm = Signal $ \t ->
+  let s' = runSig s t
+      e' = runSig s t
+      tm' = runSig tm t
+  in  if (tm' < s' || tm' > e') then 0 else 1
+  
+--for use with non-signal values
+switch' s e t
+  | t < s || t > e = 0
+  | otherwise = 1
+  
+switch1 s e v = Signal $ \t ->
+  if (t < runSig s t || t > runSig e t) then 1 else (runSig v t)
 
 --Simple AD envelope driven by an input t in seconds, increasing from 0
-env :: Value -> Value -> Value -> Value -> Value -> Value
+--env :: Value -> Value -> Value -> Value -> Value -> Value
+
+{-
 env atk rel c1 c2 t
   | t > atk + rel = 0
   | t < atk = (t/atk)**c1
   | otherwise = (1 - (t-atk)/rel)**c2
+-}
+
+
+env atk crv1 rel crv2 t =
+  let phase1 = mul (switchT 0 atk t) $ (t/atk)**crv1
+      phase2 = mul (switchT atk (atk+rel) t) $ (1 - (t-atk)/rel)**crv2
+  in  phase1 + phase2
+
+divd x = mul (1/x)
+
+para x = divd 4 $ a*(x*d-b)**2 + 4
+  where a = -0.3
+        b = 3.7
+        d = 7.3
+
+
+
+
+
+{-
+envlp :: (Floating a, Ord a) => Signal a -> Signal a -> Signal a -> Signal a -> Signal a -> Signal a
+envlp atk rel c1 c2 ph = Signal $ \t ->
+  let t' = runSig ph t
+      atk' = runSig atk t
+      rel' = runSig rel t
+      c1' = runSig c1 t
+      c2' = runSig c2 t
+      phase1 = mul (switch' 0 atk' t') $ ((t'/atk')**c1')
+      phase2 = mul (switch' atk' (atk' + rel') t') $ (1 - (t'-atk')/rel')**c2'
+  in  phase1 + phase2
+-}
+
+
+
+
+
 
 {-
 fract v = v - (fromIntegral $ floor v) 

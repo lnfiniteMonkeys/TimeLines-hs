@@ -10,6 +10,7 @@ module Sound.TimeLines.Types
     ,infNumFrames
     ,defaultInfo
     ,t
+    ,constSig
   ) where
 
 import Prelude as Pr
