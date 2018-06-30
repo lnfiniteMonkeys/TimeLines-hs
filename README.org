@@ -14,24 +14,12 @@ TimeLines is a real-time environment for live coding music as functions of expli
 At the moment, TimeLines is used as the "brains" of the SuperCollider synthesis engine, a completely modular environment for building and connecting sound synthesis and editing processes. TimeLines "plugs" on top of those processes and hijacks their behavior, taking full control of their parameters over time. Everything is purely functional: no state is changed, no envelopes are triggered, no sequencers are manipulated, just waves that dictate the motion of each parameter.
 
 One day, you may even be able to use it for MIDI and CV outputs, allowing for full control over your hardware and modular synths.
-
-** Main Concepts
-*** Signal
-A Signal is a function from Time to a Value. The parameters of a synth/audio process can be thought of as signals; they all vary over time. Some may be periodic (e.g. "sin $ 2*pi*t"), others non-repeating (e.g. "noise t"), and some may stay constant for ever (e.g. "2.5"), but every moment has a specific value for every parameter associated with that synth.
-*** Timeline
-A Timeline is a collection of Signals. Some may always be relevant (i.e. affecting that parameter for every moment in time), while others may only actually affect its behavior at certain times (say, only for the first or last 10 seconds). The combination of all those Signals in a Timeline is what determines the overall behavior of that parameter over the whole of time. Theoretically, each Timeline is an equation that will yield a value for every value of time you plug into it.
-*** Window
-A Window is a frame of time. All signals are defined over continuous, infinite time. A global Window determines the time interval over which all signals are actually being evaluated and observed. Without a Window, nothing actually gets calculated, everything is hypothetical (and completely deterministic, so you can be sure that evaluating the same code over the same Window will always yield the same results).
-
-If you are familiar with DAWs, you can think of a Window as the selected section of the piece you are currently working on, which is usually either looped, to monitor changes to it while they're applied, or played in between changes.
-
-If you are more familiar with programming, you can think of the Window as the viewport in a game: the code to put together a whole level already exists, but at any given moment there is only a certain window that has to be loaded and rendered, the one that the player is actually looking at. Everything else remains in the hypothetical realm, ready to be assembled when the time is right.
-
 ** Code Examples
 #+BEGIN_SRC Haskell
+-- Set the current time selection to the first 10 seconds
 window 0 10
 
--- A synth whose parameters stay constant over time
+-- An FM synth whose parameters stay constant over time
 synth "staticTone_fm" $ do
   "amp" <>< 0.1
   "freq" <>< 200
@@ -60,3 +48,16 @@ synth "tremoloMelody_fm" $ do
   "modRatio" <>< 5
   "modAmt" <>< 1000 * (slow 2 $ tremoloLFO)
 #+END_SRC
+
+** Main Concepts
+*** Signal
+A Signal is a function from Time to a Value. The parameters of a synth/audio process can be thought of as signals; they all vary over time. Some may be periodic (e.g. "sin $ 2*pi*t"), others non-repeating (e.g. "noise t"), and some may stay constant for ever (e.g. "2.5"), but every moment has a specific value for every parameter associated with that synth.
+*** Timeline
+A Timeline is a collection of Signals. Some may always be relevant (i.e. affecting that parameter for every moment in time), while others may only actually affect its behavior at certain times (say, only for the first or last 10 seconds). The combination of all those Signals in a Timeline is what determines the overall behavior of that parameter over the whole of time. Theoretically, each Timeline is an equation that will yield a value for every value of time you plug into it.
+*** Window
+A Window is a frame of time. All signals are defined over continuous, infinite time. A global Window determines the time interval over which all signals are actually being evaluated and observed. Without a Window, nothing actually gets calculated, everything is hypothetical (and completely deterministic, so you can be sure that evaluating the same code over the same Window will always yield the same results).
+
+If you are familiar with DAWs, you can think of a Window as the selected section of the piece you are currently working on, which is usually either looped, to monitor changes to it while they're applied, or played in between changes.
+
+If you are more familiar with programming, you can think of the Window as the viewport in a game: the code to put together a whole level already exists, but at any given moment there is only a certain window that has to be loaded and rendered, the one that the player is actually looking at. Everything else remains in the hypothetical realm, ready to be assembled when the time is right.
+-- this will loop through the semitones every 5 seconds
