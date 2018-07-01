@@ -1,11 +1,16 @@
---{-# LANGUAGE FlexibleContexts #-}
-
 module Sound.TimeLines.Instruments where
 
 import Sound.TimeLines.Types
+import Sound.TimeLines.Constants
 import Data.Fixed
 import Control.Applicative
 
+
+fract :: (RealFrac a) => a -> a
+fract x =  x - (fromIntegral $ truncate x)
+
+rand :: (RealFrac a, Floating a) => Signal a -> Signal a
+rand s = Signal $ \t -> fract $ (sin $ runSig s t)*99999999
 
 speed :: Signal Value -> Signal a -> Signal a
 speed (Signal amt) (Signal sf) = Signal $ \t -> sf $ (amt t)*t
@@ -23,29 +28,26 @@ bpmToPhasors bpm numBeats numBars =
       phasorBar = wrap01 $ t/barDur
   in  (phasorBeat, phasorBar, beatDur, barDur, totalDur)
 
+-- Sample a constant sig for t = 0
 constSigToValue :: Signal a -> a
-constSigToValue (Signal sf) = sf 0
+constSigToValue sig = runSig sig 0
 
---Scales
-mixolydian = [0, 2, 4, 5, 7, 9, 10]
-phrygian = [0, 1, 3, 5, 7, 8, 10]
-dorian = [0, 2, 3, 5, 7, 9, 10]
-harmMinor = [0, 2, 3, 5, 7, 8, 11]
 
-andGate :: Signal Value -> Signal Value -> Signal Value
+andGate :: (Num a, Eq a) => Signal a -> Signal a -> Signal a
 andGate v1 v2 = Signal $ \t ->
   if (runSig v1 t == 1 && runSig v2 t == 1) then 1 else 0
 
-orGate :: Signal Value -> Signal Value -> Signal Value
+orGate :: (Num a, Eq a) => Signal a -> Signal a -> Signal a
 orGate v1 v2 = Signal $ \t ->
   if (runSig v1 t == 1 || runSig v2 t == 1) then 1 else 0
 
+semi :: (Num a, Floating a, Eq a) => Signal a -> Signal a
 semi s = 2**(s/12)
 semis ss = map semi ss
 
-eps = 0.00000001
 
 -- time between 0 and 1
+-- need to make it work with lists of lists too
 fromList :: (RealFrac b) => [Signal a] -> Signal b -> Signal a
 fromList vs phasor = Signal $ \t ->
   let ln = fromIntegral $ length vs
@@ -53,6 +55,9 @@ fromList vs phasor = Signal $ \t ->
       index = floor $ phVal*ln
   in  runSig (vs!!index) t
 
+
+--fromList :: (RealFrac b, Functor f) => [Signal a] -> Signal b -> Signal a
+--fromList l phasor =  
 
 saturate = clamp 0 1
 
@@ -166,20 +171,20 @@ env atk rel c1 c2 t
   | otherwise = (1 - (t-atk)/rel)**c2
 -}
 
-
+-- need to test
 env atk crv1 rel crv2 t =
   let phase1 = mul (switchT 0 atk t) $ (t/atk)**crv1
       phase2 = mul (switchT atk (atk+rel) t) $ (1 - (t-atk)/rel)**crv2
   in  phase1 + phase2
 
+
 divd x = mul (1/x)
 
+--parabola test
 para x = divd 4 $ a*(x*d-b)**2 + 4
   where a = -0.3
         b = 3.7
         d = 7.3
-
-
 
 
 
@@ -195,8 +200,6 @@ envlp atk rel c1 c2 ph = Signal $ \t ->
       phase2 = mul (switch' atk' (atk' + rel') t') $ (1 - (t'-atk')/rel')**c2'
   in  phase1 + phase2
 -}
-
-
 
 
 
