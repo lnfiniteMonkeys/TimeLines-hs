@@ -7,7 +7,7 @@ import Data.IORef
 import System.IO.Unsafe (unsafePerformIO)
 
 import Sound.TimeLines.Types
-
+--import Sound.TimeLines.Util
 
 sendMessage :: String -> String -> IO()
 sendMessage path str = do
@@ -27,14 +27,20 @@ sendPlay = do
   sendMessage "/TimeLines/play" ""
 
 
+-- Sample a constant sig for t = 0
+constSigToValue :: Signal a -> a
+constSigToValue sig = runSig sig 0
 
 --Updates the global time Window
-window :: Time -> Time -> IO Window
+window :: Signal Time -> Signal Time -> IO Window
 window s e = do
+  let  s' = constSigToValue s
+       e' = constSigToValue e
+       dur = e'- s'
   sendMessage "/TimeLines/window" $ show dur
-  writeIORef globalWindowRef (s, e)
-  return (s, e)
-    where dur = e-s
+  writeIORef globalWindowRef (s', e')
+  return (s', e')
+
 
 --keeping track of the time window to render each TimeLine over
 {-# NOINLINE globalWindowRef #-}

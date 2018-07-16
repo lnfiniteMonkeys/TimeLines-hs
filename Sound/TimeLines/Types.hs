@@ -19,6 +19,7 @@ import Control.Monad
 
 type Value = Double
 type Time = Double
+
 type Window = (Time, Time)
 
 newtype Signal a = Signal {runSig :: Time -> a}
@@ -49,12 +50,17 @@ instance Monad Signal where
                                     in  runSig sigB t
 
 instance (Num a, Eq a) => Num (Signal a) where
-      negate      = fmap negate
-      (+)         = liftA2 (+)
-      (*)         = liftA2 (*) -- lazy multiplicator
-      fromInteger = pure . fromInteger
-      abs         = fmap abs
-      signum      = fmap signum
+  negate      = fmap negate
+  (+)         = liftA2 (+)
+  (*)         = liftA2 lazyMul -- lazy multiplicator
+  fromInteger = pure . fromInteger
+  abs         = fmap abs
+  signum      = fmap signum
+
+-- don't evaluate second term if first term is 0
+lazyMul :: (Num a, Eq a) => a -> a -> a
+lazyMul 0 _ = 0
+lazyMul a b = a * b
 
 
 instance (Fractional a, Eq a) => Fractional (Signal a) where
@@ -77,14 +83,8 @@ instance (Floating a, Eq a) => Floating (Signal a) where
   atanh = fmap atanh
   acosh = fmap acosh
 
-
---instance (Num a, Ord a) => Real (Signal a) where
---  toRational = 
-
-
 t :: Signal Value
 t = Signal $ \t -> t
-
 
 -- A timeline (file written to disk) has a start (> 0) and end point,
 -- a samplerate and a string that denotes which parameter of the synth it controls
@@ -107,8 +107,8 @@ defaultSampleRate = 700
 defaultInfo :: Window -> String -> TLinfo
 defaultInfo w argName = TLinfo w defaultSampleRate argName
 
--- A TimeLine is made up of a signal (defined over infinite time starting from 0)
--- and a cTLinfo, which determines which part of the signal we are observing
+-- A TimeLine is made up of a signal (defined over infinite time)
+-- and a TLinfo, which determines which part of the signal we are observing and sampling
 data TimeLine a = TimeLine {tlSig::Signal a,
                             tlInfo::TLinfo
                            }
@@ -118,10 +118,6 @@ type Param = String
 type ParamList = [Param]
 
 
--- don't evaluate second term if first term is 0
-(*.) :: (Num a, Eq a) => a -> a -> a
-(*.) 0 _ = 0
-(*.) a b = a * b
 
 --shortcut to use with $ for RHS argument
-mu = (*.)
+mu = lazyMul

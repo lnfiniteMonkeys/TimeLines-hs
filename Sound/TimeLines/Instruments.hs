@@ -5,16 +5,26 @@ import Sound.TimeLines.Constants
 import Data.Fixed
 import Control.Applicative
 
+flattenLists :: [[Signal a]] -> Signal Value -> [Signal a]
+flattenLists listOfLists phasor = map f listOfLists
+  where f list = flip fromList (wrap01 $ mul (constSig $ fromIntegral $ length listOfLists) phasor) list
+
+fromLists listsofLists phasor = fromList (flattenLists listsofLists phasor) phasor
 
 fract :: (RealFrac a) => a -> a
 fract x =  x - (fromIntegral $ truncate x)
 
+--flor :: Sig
+flor s = Signal $ \t -> floor (runSig s t)
 rand :: (RealFrac a, Floating a) => Signal a -> Signal a
 rand s = Signal $ \t -> fract $ (sin $ runSig s t)*99999999
 
 speed :: Signal Value -> Signal a -> Signal a
 speed (Signal amt) (Signal sf) = Signal $ \t -> sf $ (amt t)*t
 fast = speed
+
+offset :: Signal Value -> Signal a -> Signal a
+offset amt s = Signal $ \t -> runSig s $ add t $ runSig amt t
 
 slow :: Signal Value -> Signal a -> Signal a
 slow (Signal amt) (Signal sf) = Signal $ \t -> sf $ t/(amt t)
@@ -28,9 +38,7 @@ bpmToPhasors bpm numBeats numBars =
       phasorBar = wrap01 $ t/barDur
   in  (phasorBeat, phasorBar, beatDur, barDur, totalDur)
 
--- Sample a constant sig for t = 0
-constSigToValue :: Signal a -> a
-constSigToValue sig = runSig sig 0
+
 
 
 andGate :: (Num a, Eq a) => Signal a -> Signal a -> Signal a
@@ -54,6 +62,23 @@ fromList vs phasor = Signal $ \t ->
       phVal = clamp 0.0 0.99999999 (runSig phasor t)
       index = floor $ phVal*ln
   in  runSig (vs!!index) t
+
+
+{-
+fromLists :: (RealFrac b) => [[Signal a]] -> Signal b -> [Signal a]
+fromLists ls phasor = Signal $ \t ->
+  let ln = fromIntegral $ length ls
+      phVal = clamp 0.0 0.99999999 (runSig phasor t)
+      index = floor $ phVal*ln
+  in  map (runSig ls!!index) t
+-}
+
+list :: (RealFrac b) => Signal [a] -> Signal b -> Signal a
+list vs s = Signal $ \t ->
+  let ln = fromIntegral $ length $ runSig vs t
+      phVal = clamp 0.0 0.99999999 (runSig s t)
+      index = floor $ phVal*ln
+  in  (runSig vs t)!!index
 
 
 --fromList :: (RealFrac b, Functor f) => [Signal a] -> Signal b -> Signal a
@@ -90,6 +115,7 @@ add = (+)
 mul :: (Num a) => Signal a -> Signal a -> Signal a
 mul = liftA2 (*)
 --mul = (*.)
+
 
 --Ken Perlin, "Texturing and Modeling: A Procedural Approach"
 smoothstep s e t = x*x*x*(x*(x*6-15) + 10)
