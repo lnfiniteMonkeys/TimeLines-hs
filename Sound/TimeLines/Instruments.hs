@@ -1,9 +1,22 @@
 module Sound.TimeLines.Instruments where
 
+
+import Prelude as Pr
 import Sound.TimeLines.Types
 import Sound.TimeLines.Constants
 import Data.Fixed
 import Control.Applicative
+
+type Chord = [Signal Value]
+type Progression = [Chord]
+
+--TODO: test
+arpeggio :: Progression -> Signal Value -> Signal Value -> Signal Value
+arpeggio chords octaves sig =
+  let firstOctaveLoop = fromLists chords $ wrap01 $ octaves * sig
+  in  firstOctaveLoop * (add 1 $ flor $ octaves * sig)
+  --  firstOctaveloop * (fromList [0..octaves] sig)
+
 
 flattenLists :: [[Signal a]] -> Signal Value -> [Signal a]
 flattenLists listOfLists phasor = map f listOfLists
@@ -15,7 +28,9 @@ fract :: (RealFrac a) => a -> a
 fract x =  x - (fromIntegral $ truncate x)
 
 --flor :: Sig
-flor s = Signal $ \t -> floor (runSig s t)
+flor :: Signal Value -> Signal Value 
+flor s = Signal $ \t -> fromIntegral $ floor (runSig s t)
+
 rand :: (RealFrac a, Floating a) => Signal a -> Signal a
 rand s = Signal $ \t -> fract $ (sin $ runSig s t)*99999999
 
@@ -24,7 +39,7 @@ speed (Signal amt) (Signal sf) = Signal $ \t -> sf $ (amt t)*t
 fast = speed
 
 offset :: Signal Value -> Signal a -> Signal a
-offset amt s = Signal $ \t -> runSig s $ add t $ runSig amt t
+offset amt s = Signal $ \t -> runSig s $ t + (runSig amt t)
 
 slow :: Signal Value -> Signal a -> Signal a
 slow (Signal amt) (Signal sf) = Signal $ \t -> sf $ t/(amt t)
@@ -111,7 +126,8 @@ sqr :: Signal Value -> Signal Value
 sqr = sign . sin
 
 -- Convenience functions for use with $
-add = (+)
+add :: (Num a) => Signal a -> Signal a -> Signal a
+add = liftA2 (+)
 mul :: (Num a) => Signal a -> Signal a -> Signal a
 mul = liftA2 (*)
 --mul = (*.)
