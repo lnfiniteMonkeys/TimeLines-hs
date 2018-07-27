@@ -3,10 +3,13 @@ module Sound.TimeLines.Types
     ,Time
     ,Value
     ,Window
+    ,Chord
+    ,Scale
+    ,ChordProg
     ,TLinfo(..)
     ,TimeLine(..)
-    ,Param
     ,SynthID
+    ,Param
     ,infNumFrames
     ,defaultInfo
     ,t
@@ -17,16 +20,50 @@ import Prelude as Pr
 import Control.Applicative
 import Control.Monad
 
+
+-- | The type actually written to files
+-- | (default = Double)
 type Value = Double
+
+-- | The type passed to Signals
 type Time = Double
 
+-- | Type representing a section of time
+-- | with start and end points
 type Window = (Time, Time)
 
+-- | Represents the name of a synth stored on the server
+type SynthID = String
+-- | Represents the name of a SynthDef's parameter
+type Param = String
+
+{- ?
+type Scale = [Value] --> used as "Signal Scale"
+type Chord = [Value] --> used as "Signal Chord"
+type ChordProg = [Chord]
+-}
+
+type Scale = [Signal Value]
+type Chord = [Signal Value]
+type ChordProg = [Chord]
+
+-- | The fundamental type of TimeLines.
+-- | A Signal of type "a" is a function
+-- | from Time to "a"
 newtype Signal a = Signal {runSig :: Time -> a}
 
+-- | The time Signal, always returns the time
+t :: Signal Value
+t = Signal $ \t -> t
+
+-- | Takes any argument and raises it to
+-- | a Signal that always returns that argument
+constSig :: a -> Signal a
 constSig a = Signal $ \t -> a
 
----------------INSTANCES---------------
+
+---------------------------INSTANCES---------------------------
+
 --FUNCTOR
 instance Functor Signal where
   fmap f (Signal a) = Signal $ fmap f a
@@ -49,6 +86,17 @@ instance Monad Signal where
                                         sigB = f newA
                                     in  runSig sigB t
 
+-- | Lazy multiplicator, doesn't evaluate the second
+-- | term if first term is equal to 0
+lazyMul :: (Num a, Eq a) => a -> a -> a
+lazyMul 0 _ = 0
+lazyMul a b = a * b
+
+-- | Shortcut for being able to use
+-- | "$" with the RHS expression
+mul = lazyMul
+
+--NUM
 instance (Num a, Eq a) => Num (Signal a) where
   negate      = fmap negate
   (+)         = liftA2 (+)
@@ -57,16 +105,13 @@ instance (Num a, Eq a) => Num (Signal a) where
   abs         = fmap abs
   signum      = fmap signum
 
--- don't evaluate second term if first term is 0
-lazyMul :: (Num a, Eq a) => a -> a -> a
-lazyMul 0 _ = 0
-lazyMul a b = a * b
 
-
+--FRACTIONAL
 instance (Fractional a, Eq a) => Fractional (Signal a) where
   fromRational = pure . fromRational
   recip = fmap recip
 
+--FLOATING
 instance (Floating a, Eq a) => Floating (Signal a) where
   pi    = pure pi
   sqrt  = fmap sqrt
@@ -83,41 +128,39 @@ instance (Floating a, Eq a) => Floating (Signal a) where
   atanh = fmap atanh
   acosh = fmap acosh
 
-t :: Signal Value
-t = Signal $ \t -> t
-
--- A timeline (file written to disk) has a start (> 0) and end point,
--- a samplerate and a string that denotes which parameter of the synth it controls
+-- | A TLinfo holds all the information needed
+-- | to sample a Signal, such as the Window, the
+-- | sampling rate, and a string denoting which
+-- | parameter of the synth it controls
 data TLinfo = TLinfo {infWindow::Window,
                       infSR::Int,
                       infParam::String
                      }
               deriving (Eq, Show)
 
--- Duration of file to be written and played back
+-- | Calculates the duration, in seconds, of a TLinfo
 infDur :: TLinfo -> Time
 infDur (TLinfo (s, e) _ _) = e - s
 
--- The number of frames that will be written to file
+-- | Calculates the number of frames that will be sampled
+-- | and written to file
 infNumFrames :: TLinfo -> Int
 infNumFrames i = Pr.floor $ infDur i * fromIntegral (infSR i)
 
---make it an IORef?
-defaultSampleRate = 700
-defaultInfo :: Window -> String -> TLinfo
-defaultInfo w argName = TLinfo w defaultSampleRate argName
+-- | The default sampling rate
+defaultSampleRate = 700 -- make it an IORef?
 
--- A TimeLine is made up of a signal (defined over infinite time)
--- and a TLinfo, which determines which part of the signal we are observing and sampling
-data TimeLine a = TimeLine {tlSig::Signal a,
-                            tlInfo::TLinfo
+-- | Returns the a default TLinfo given a window and a Param
+defaultInfo :: Window -> Param -> TLinfo
+defaultInfo w p = TLinfo w defaultSampleRate p
+
+{-|
+A TimeLine is the result of observing and sampling
+a Signal over a certain Window, what actually gets
+written to disk. It is made up of a Signal and an
+accompanying TLinfo.
+-}
+data TimeLine a = TimeLine {tlSig :: Signal a,
+                            tlInfo :: TLinfo
                            }
 
-type SynthID = String
-type Param = String
-type ParamList = [Param]
-
-
-
---shortcut to use with $ for RHS argument
-mu = lazyMul

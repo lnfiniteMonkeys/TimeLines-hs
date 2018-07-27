@@ -18,10 +18,9 @@ import Control.Monad.State
 
 import Data.Fixed
 
-default (Double)
-
-
---Takes a TimeLine, writes it to a file, and returns number of frames written
+default (Value)
+        
+-- | Takes a TimeLine, writes it to a file, and returns number of frames written
 writeTL :: TimeLine Double -> IO Int
 writeTL tl@(TimeLine sig info) = do
   let fileName = infParam info
@@ -32,14 +31,13 @@ writeTL tl@(TimeLine sig info) = do
   closeHandle h
   return framesWritten
 
-
 --Renders all timelines with the new Window
 --writeAllTimelines = undefined
 --find which parameters are defined, get their signal, render it
 --over the current window, reload buffers
 
---Render a timeline over the current window and write it to a file
-writeParamFile :: Param -> Signal Double -> IO()
+-- | Samples a timeline over the current window and writes it to a file
+writeParamFile :: Param -> Signal Value -> IO()
 writeParamFile name sig = do
   currentWindow <- readIORef globalWindowRef
   let info = defaultInfo currentWindow name
@@ -47,18 +45,14 @@ writeParamFile name sig = do
   framesWritten <- writeTL $ TimeLine sig info
   return ()
 
---Send SC a message to load a certain buffer and update the synth
+-- | Sends a message to SCLang to load a certain file
+-- | in a buffer and update the respective synth
 sendUpdateMsg :: String -> IO()
 sendUpdateMsg filename = sendMessage "/TimeLines/load" filename
 
-
---type Signal = Reader Time Value
-
-
-
-
---Read the context of a parameter (i.e. the synth name), write
---the timeline to a file with the appropriate name, and load it
+-- | Reads the context of a parameter (i.e. the synth name), writes
+-- | the timeline to a file with the appropriate name, and sends
+-- | a "load" message to SCLang
 sendParam :: Param -> Signal Value -> ReaderT SynthID IO ThreadId
 sendParam p sig = do
   synthName <- ask
@@ -68,11 +62,18 @@ sendParam p sig = do
     writeParamFile filename sig
     sendUpdateMsg filename
 
+-- | Convenience operator to be used while playing
 (<><) = sendParam
 
---
+{-|
+Provides the context for a synth by means of
+the SynthID. Each Signal provided reads the
+SynthID and prepends it to its filename so
+that SCLang knows where to apply it
+-}
 synth :: SynthID -> ReaderT SynthID IO ThreadId -> IO ThreadId
-synth synthID params = do
+synth synthID params = forkIO $ do
   pathToTemp <- getTempDirectory
   runReaderT params $ pathToTemp ++ synthID
+  return ()
 

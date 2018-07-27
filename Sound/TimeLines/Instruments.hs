@@ -1,28 +1,70 @@
 module Sound.TimeLines.Instruments where
 
-
 import Prelude as Pr
 import Sound.TimeLines.Types
 import Sound.TimeLines.Constants
 import Data.Fixed
 import Control.Applicative
 
-type Chord = [Signal Value]
-type Progression = [Chord]
-
 --TODO: test
-arpeggio :: Progression -> Signal Value -> Signal Value -> Signal Value
+{-
+arpeggio :: ChordProg -> Signal Value -> Signal Value -> Signal Value
 arpeggio chords octaves sig =
   let firstOctaveLoop = fromLists chords $ wrap01 $ octaves * sig
-  in  firstOctaveLoop * (add 1 $ flor $ octaves * sig)
+      octaves = 12 * (flor $ octaves * sig)
+  in  firstOctaveLoop + octaves
   --  firstOctaveloop * (fromList [0..octaves] sig)
+-}
 
+{-
+scaleToChords :: Scale -> ChordProg
+scaleToChords scale = map f [0..l]
+  where l = length scale
+        f = \x -> [scale!!x, scale!!((x+2)%l), scale!!((x+4)%l)]
+-}
+
+
+randoms :: Signal Value -> Signal Value -> Signal Value -> Signal Value
+randoms num offset sig = rand $ add offset $ flor $ num*sig
+
+randomsBi :: Signal Value -> Signal Value -> Signal Value -> Signal Value
+randomsBi num offset sig = uniToBi $ randoms num offset sig
+
+helperChord :: Scale -> Signal Value -> Int -> Signal Value
+helperChord scale numSig voiceNum = Signal $ \t ->
+  let index = floor (runSig numSig t)
+      voiceIndex = Pr.mod (index + 2*voiceNum) 7
+      scale' = map (flip runSig 0) scale
+  in scale'!!voiceIndex
+
+
+raise :: Signal Value -> Signal Value -> Signal Value
+raise amt sig = amt +(1-amt)*sig
+
+degreesToChords :: Scale -> [Signal Value] -> ChordProg
+degreesToChords scale deg = map (chords scale) deg
+
+chords :: Scale -> Signal Value -> [Signal Value]
+chords scale chordNum = map semi $ chordsFromScale scale chordNum
+
+melody list sig = semi $ fromList list sig
+
+chordsFromScale :: Scale -> Signal Value -> [Signal Value]
+chordsFromScale scale num = map (helperChord scale num) [0..3]
+
+arpeggio :: ChordProg -> Signal Value -> Signal Value -> Signal Value
+arpeggio chords octaves sig =
+  let loop = sequenceLists chords $ wrap01 $ octaves*sig
+      octave = 12 * (flor $ octaves * sig)
+  in  loop + octave
 
 flattenLists :: [[Signal a]] -> Signal Value -> [Signal a]
 flattenLists listOfLists phasor = map f listOfLists
   where f list = flip fromList (wrap01 $ mul (constSig $ fromIntegral $ length listOfLists) phasor) list
 
-fromLists listsofLists phasor = fromList (flattenLists listsofLists phasor) phasor
+sequenceLists listsofLists phasor = fromList (flattenLists listsofLists phasor) phasor
+
+--sequenceChords :: ChordProg -> Signal Value -> Chord
 
 fract :: (RealFrac a) => a -> a
 fract x =  x - (fromIntegral $ truncate x)
@@ -80,8 +122,8 @@ fromList vs phasor = Signal $ \t ->
 
 
 {-
-fromLists :: (RealFrac b) => [[Signal a]] -> Signal b -> [Signal a]
-fromLists ls phasor = Signal $ \t ->
+sequenceLists :: (RealFrac b) => [[Signal a]] -> Signal b -> [Signal a]
+sequenceLists ls phasor = Signal $ \t ->
   let ln = fromIntegral $ length ls
       phVal = clamp 0.0 0.99999999 (runSig phasor t)
       index = floor $ phVal*ln
@@ -134,8 +176,11 @@ mul = liftA2 (*)
 
 
 --Ken Perlin, "Texturing and Modeling: A Procedural Approach"
+
+smoothstep :: Signal Value -> Signal Value -> Signal Value -> Signal Value
 smoothstep s e t = x*x*x*(x*(x*6-15) + 10)
-  where x = clamp 0 1 t
+  where x = fmap (clamp 0 1) t
+
 
 clamp :: (Ord a) => a -> a -> a -> a
 clamp mn mx = max mn . min mx
