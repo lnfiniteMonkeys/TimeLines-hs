@@ -26,12 +26,7 @@ reset = do
   sendMessage "/TimeLines/reset" ""
   (s, e) <- readIORef globalWindowRef
   let dur = e - s
-  sendMessage "/TimeLines/window" (show dur)
-
--- | Sends a "play" message to SCLang
-sendPlay :: IO ()
-sendPlay = do
-  sendMessage "/TimeLines/play" ""
+  sendMessage "/TimeLines/setWindow" (show dur)
 
 -- | Updates the global time Window
 window :: Signal Time -> Signal Time -> IO Window
@@ -39,7 +34,7 @@ window s e = do
   let  s' = constSigToValue s
        e' = constSigToValue e
        dur = e'- s'
-  sendMessage "/TimeLines/window" $ show dur
+  sendMessage "/TimeLines/setWindow" $ show dur
   writeIORef globalWindowRef (s', e')
   return (s', e')
 
