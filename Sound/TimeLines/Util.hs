@@ -23,7 +23,7 @@ fromToIn lo hi steps = [lo, lo+step .. hi]
 
 -- | Samples the TimeLine according to its info, returns a list of values
 getVals :: TimeLine a -> [a]
-getVals (TimeLine sig info@(TLinfo (s, e) _ _)) = map (runSig sig) domain
+getVals (TimeLine sig info@(TLinfo (s, e) _ _)) = map f domain
   where f = runSig sig
         domain = fromToIn s e $ infNumFrames info
         

@@ -23,10 +23,11 @@ scaleToChords scale = map f [0..l]
         f = \x -> [scale!!x, scale!!((x+2)%l), scale!!((x+4)%l)]
 -}
 
-
+-- | Indexes into a number of unipolar random numbers using a phasor
 randoms :: Signal Value -> Signal Value -> Signal Value -> Signal Value
 randoms num offset sig = rand $ add offset $ flor $ num*sig
 
+-- | Indexes into a number of bipolar random numbers using a phasor
 randomsBi :: Signal Value -> Signal Value -> Signal Value -> Signal Value
 randomsBi num offset sig = uniToBi $ randoms num offset sig
 
@@ -38,54 +39,72 @@ helperChord scale numSig voiceNum = Signal $ \t ->
   in scale'!!voiceIndex
 
 
+-- | Raises a (normalised) signal's minimum value
 raise :: Signal Value -> Signal Value -> Signal Value
 raise amt sig = amt +(1-amt)*sig
 
+-- | Takes a scale and a list of degrees and returns a list of chords
 degreesToChords :: Scale -> [Signal Value] -> ChordProg
-degreesToChords scale deg = map (chords scale) deg
+degreesToChords scale deg = map (degree scale) deg
 
-chords :: Scale -> Signal Value -> [Signal Value]
-chords scale chordNum = map semi $ chordsFromScale scale chordNum
+-- | Returns a list of ratios representing a degree of a scale
+degree :: Scale -> Signal Value -> [Signal Value]
+degree scale degreeNum = map semi $ chordsFromScale scale degreeNum
 
+-- | Shortcut for indexing into a list of semitones
 melody list sig = semi $ fromList list sig
 
 chordsFromScale :: Scale -> Signal Value -> [Signal Value]
 chordsFromScale scale num = map (helperChord scale num) [0..3]
 
+-- | Takes a chord progression, a number of octaves, and a
+-- | normalised phasor and arpeggiates them
 arpeggio :: ChordProg -> Signal Value -> Signal Value -> Signal Value
 arpeggio chords octaves sig =
   let loop = sequenceLists chords $ wrap01 $ octaves*sig
       octave = 12 * (flor $ octaves * sig)
   in  loop + octave
 
+
+-- | Flattens a list of lists
 flattenLists :: [[Signal a]] -> Signal Value -> [Signal a]
 flattenLists listOfLists phasor = map f listOfLists
   where f list = flip fromList (wrap01 $ mul (constSig $ fromIntegral $ length listOfLists) phasor) list
 
+-- | Takes a list of lists and a normalized phasors
+-- | and sequences their elements
 sequenceLists listsofLists phasor = fromList (flattenLists listsofLists phasor) phasor
 
 --sequenceChords :: ChordProg -> Signal Value -> Chord
 
+-- | Returns the (absolute) fractional part of a signal
 fract :: (RealFrac a) => a -> a
 fract x =  x - (fromIntegral $ truncate x)
 
---flor :: Sig
+-- | Floors a signal while keeping it a double
 flor :: Signal Value -> Signal Value 
 flor s = Signal $ \t -> fromIntegral $ floor (runSig s t)
 
+-- | Indexes into a pseudo-random domain using a signal
 rand :: (RealFrac a, Floating a) => Signal a -> Signal a
 rand s = Signal $ \t -> fract $ (sin $ runSig s t)*99999999
 
+-- | Speeds up a signal by an amount
 speed :: Signal Value -> Signal a -> Signal a
 speed (Signal amt) (Signal sf) = Signal $ \t -> sf $ (amt t)*t
 fast = speed
 
+-- | Offsets a signal in time by an amount
 offset :: Signal Value -> Signal a -> Signal a
 offset amt s = Signal $ \t -> runSig s $ t + (runSig amt t)
 
+-- | Slows down a signal by an amount
 slow :: Signal Value -> Signal a -> Signal a
 slow (Signal amt) (Signal sf) = Signal $ \t -> sf $ t/(amt t)
 
+-- | Takes bpm, number of beats in a bar, and number of bars
+-- | and returns two phasors, one for beat and one for bar,
+-- | and the beat, bar, and total durations
 bpmToPhasors :: Signal Value -> Signal Value -> Signal Value -> (Signal Value, Signal Value, Signal Value, Signal Value, Signal Value)
 bpmToPhasors bpm numBeats numBars =
   let beatDur = 60/bpm
@@ -96,23 +115,29 @@ bpmToPhasors bpm numBeats numBars =
   in  (phasorBeat, phasorBar, beatDur, barDur, totalDur)
 
 
-
-
+-- | Takes two signals and returns 1 if both of them are 1,
+-- | otherwise 0
 andGate :: (Num a, Eq a) => Signal a -> Signal a -> Signal a
 andGate v1 v2 = Signal $ \t ->
   if (runSig v1 t == 1 && runSig v2 t == 1) then 1 else 0
 
+-- | Takes two signals and returns 1 if either of them is 1, 
+-- | otherwise returns 0
 orGate :: (Num a, Eq a) => Signal a -> Signal a -> Signal a
 orGate v1 v2 = Signal $ \t ->
   if (runSig v1 t == 1 || runSig v2 t == 1) then 1 else 0
 
+-- | Takes a value in semitones and returns the ratio by which to
+-- | multiply a fundamental to get that interval
 semi :: (Num a, Floating a, Eq a) => Signal a -> Signal a
 semi s = 2**(s/12)
+
+-- | Takes a list of semitones and returns a list of ratios
 semis ss = map semi ss
 
 
--- time between 0 and 1
--- need to make it work with lists of lists too
+-- | Indexes into a list of Signals using a normalized signal
+-- | (i.e. between 0 and 1)
 fromList :: (RealFrac b) => [Signal a] -> Signal b -> Signal a
 fromList vs phasor = Signal $ \t ->
   let ln = fromIntegral $ length vs
@@ -121,26 +146,8 @@ fromList vs phasor = Signal $ \t ->
   in  runSig (vs!!index) t
 
 
-{-
-sequenceLists :: (RealFrac b) => [[Signal a]] -> Signal b -> [Signal a]
-sequenceLists ls phasor = Signal $ \t ->
-  let ln = fromIntegral $ length ls
-      phVal = clamp 0.0 0.99999999 (runSig phasor t)
-      index = floor $ phVal*ln
-  in  map (runSig ls!!index) t
--}
 
-list :: (RealFrac b) => Signal [a] -> Signal b -> Signal a
-list vs s = Signal $ \t ->
-  let ln = fromIntegral $ length $ runSig vs t
-      phVal = clamp 0.0 0.99999999 (runSig s t)
-      index = floor $ phVal*ln
-  in  (runSig vs t)!!index
-
-
---fromList :: (RealFrac b, Functor f) => [Signal a] -> Signal b -> Signal a
---fromList l phasor =  
-
+-- | Clamps between 0 and 1
 saturate = clamp 0 1
 
 boolToNum :: (Num a) => Bool -> a
@@ -148,47 +155,55 @@ boolToNum b
   | b == True = 1
   | b == False = 0
 
+-- | Positive = 1, negative = 0
 _sign :: (Num a, Ord a) => a -> a
 _sign v = boolToNum (v <= 0)
 -- Bipolar (considering 0)
 
+-- | Positive = 1, 0 = 0, negative = -1
 _signB :: (Num a, Ord a) => a -> a
 _signB v
   | v == 0 = 0
   | v < 0 = -1
   | v > 0 = 1
 
+-- | Returns 1 for positive signals and 0 for negative
 sign :: (Ord a, Num a, Functor f) => f a -> f a
 sign s = fmap _sign s
 
+-- | Returns 1 for positive signals, 0 for 0, -1 for negative
 signB :: (Ord a, Num a, Functor f) => f a -> f a
 signB s = fmap _signB s
 
+-- | Normalized square wave with period of 2*pi
 sqr :: Signal Value -> Signal Value
 sqr = sign . sin
 
 -- Convenience functions for use with $
-add :: (Num a) => Signal a -> Signal a -> Signal a
+-- add :: (Num a) => Signal a -> Signal a -> Signal a
 add = liftA2 (+)
-mul :: (Num a) => Signal a -> Signal a -> Signal a
-mul = liftA2 (*)
+
+mul = liftA2 lazyMul
 --mul = (*.)
 
 
 --Ken Perlin, "Texturing and Modeling: A Procedural Approach"
-
+-- | Smoothstep
 smoothstep :: Signal Value -> Signal Value -> Signal Value -> Signal Value
 smoothstep s e t = x*x*x*(x*(x*6-15) + 10)
   where x = fmap (clamp 0 1) t
 
-
+-- | Clamps a value
 clamp :: (Ord a) => a -> a -> a -> a
 clamp mn mx = max mn . min mx
 
+-- | Convert a bipolar wave to unipolar
 biToUni v = 0.5+0.5*v
 
+-- | Convert a unipolar wave to bipolar
 uniToBi v = 1 - 2*v
 
+-- | Normalized sine wave
 sin01 :: (Fractional a, Floating a) => a -> a 
 sin01 = biToUni . sin
 
@@ -197,9 +212,11 @@ moduloSig :: (Real a, Applicative f) => f a -> f a -> f a
 moduloSig s1 s2 = liftA2 (mod') s1 s2
 (%) = moduloSig
 
+-- | Modulo 1
 wrap01 s = s % 1
 --mod1 = wrap01
 
+-- | Linear interpolation using a signal
 lerp :: (Num a) => Signal a -> Signal a -> Signal a -> Signal a
 lerp s e phsr = Signal $ \t ->
   let v1 = runSig s t
@@ -207,12 +224,14 @@ lerp s e phsr = Signal $ \t ->
       mix = runSig phsr t
   in  (v1*(1-mix)) + (v2*mix)
 
+-- convenience shortcuts
 lerp01 = lerp 0 1
 lerp10 = lerp 1 0
 
 fromTo = lerp
 
 -- pow x $ a + b = (a+b)**x
+-- | Applies an exponent to a signal
 pow :: (Floating a, Eq a) => Signal a -> Signal a -> Signal a
 pow = flip (**)
 
@@ -266,12 +285,6 @@ env atk crv1 rel crv2 t =
 
 
 divd x = mul (1/x)
-
---parabola test
-para x = divd 4 $ a*(x*d-b)**2 + 4
-  where a = -0.3
-        b = 3.7
-        d = 7.3
 
 
 
