@@ -14,6 +14,7 @@ module Sound.TimeLines.Types
     ,defaultInfo
     ,t
     ,constSig
+    ,lazyMul
   ) where
 
 import Prelude as Pr
@@ -32,6 +33,8 @@ type Time = Double
 -- | with start and end points
 type Window = (Time, Time)
 
+-- | Represents the rate at which a Signal is to be sampled
+type SamplingRate = Int
 -- | Represents the name of a synth stored on the server
 type SynthID = String
 -- | Represents the name of a SynthDef's parameter
@@ -59,22 +62,24 @@ t = Signal $ \t -> t
 -- | Takes any argument and raises it to
 -- | a Signal that always returns that argument
 constSig :: a -> Signal a
-constSig a = Signal $ \t -> a
+constSig v = Signal $ \t -> v
 
 
 ---------------------------INSTANCES---------------------------
 
 --FUNCTOR
 instance Functor Signal where
-  fmap f (Signal a) = Signal $ fmap f a
+  fmap f (Signal sf) = Signal $ fmap f sf
+  --Alternate implementation:
+  --fmap f (Signal sf) = Signal $ \t -> f (sf t)
   (<$) = fmap . const
 
 --APPLICATIVE
 instance Applicative Signal where
   -- Transform a value "a" to a signal of constant value "a"
   pure = constSig
+  liftA2 f s1 s2 = Signal $ \t -> f (runSig s1 t) (runSig s2 t)
   sf <*> s = Signal $ \t -> (runSig sf t) (runSig s t)
-  --liftA2 f s1 s2 = Signal $ \t -> f (runSig s1 t) (runSig s2 t)
   -- A signal with function "f" of type "Time -> (a -> b)", applied at Time "t" to
   -- a signal with function "x" of type "Time -> b", is equal to the value of f for
   -- Time t, applied to the value of x for Time t
@@ -82,8 +87,8 @@ instance Applicative Signal where
 --MONAD
 instance Monad Signal where
   return = pure
-  (Signal s) >>= f = Signal $ \t -> let newA = s t
-                                        sigB = f newA
+  (Signal s) >>= f = Signal $ \t -> let firstResult = s t
+                                        sigB = f firstResult
                                     in  runSig sigB t
 
 -- | Lazy multiplicator, doesn't evaluate the second
@@ -133,7 +138,7 @@ instance (Floating a, Eq a) => Floating (Signal a) where
 -- | sampling rate, and a string denoting which
 -- | parameter of the synth it controls
 data TLinfo = TLinfo {infWindow::Window,
-                      infSR::Int,
+                      infSR::SamplingRate,
                       infParam::String
                      }
               deriving (Eq, Show)

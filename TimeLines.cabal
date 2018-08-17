@@ -32,13 +32,16 @@ library
     , hosc
     , hsndfile
     , mtl
+    , c2hs
+                        
   exposed-modules:
       Sound.TimeLines.Context
       Sound.TimeLines.TimeLines
       Sound.TimeLines.Types
       Sound.TimeLines.OSC
       Sound.TimeLines.Util
-      Sound.TimeLines.Toolkit
+      Sound.TimeLines.Instruments
+                  
   other-modules:
       Paths_TimeLines
   default-language: Haskell2010

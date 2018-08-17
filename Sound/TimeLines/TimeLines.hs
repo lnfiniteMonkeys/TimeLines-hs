@@ -56,11 +56,11 @@ sendUpdateMsg filename = sendMessage "/TimeLines/load" filename
 sendParam :: Param -> Signal Value -> ReaderT SynthID IO ThreadId
 sendParam p sig = do
   synthName <- ask
-  let filename = synthName ++ "_" ++ p ++ ".w64"
+  let filepath = synthName ++ "_" ++ p ++ ".w64"
   -- Spawn a new thread to write the file and send the update message
   liftIO $ forkIO $ do
-    writeParamFile filename sig
-    sendUpdateMsg filename
+    writeParamFile filepath sig
+    sendUpdateMsg filepath
 
 -- | Convenience operator to be used while playing
 (<><) = sendParam
