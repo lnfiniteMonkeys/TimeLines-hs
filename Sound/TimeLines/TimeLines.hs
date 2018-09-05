@@ -3,7 +3,7 @@ module Sound.TimeLines.TimeLines where
 import qualified Sound.File.Sndfile as SF
 
 --import System.IO as IO
-import Data.IORef (readIORef)
+import Data.IORef (IORef, newIORef, readIORef, writeIORef, modifyIORef)
 
 import Sound.TimeLines.Types
 import Sound.TimeLines.Util
@@ -13,10 +13,13 @@ import Sound.TimeLines.OSC
 import Control.Concurrent (forkIO, ThreadId)
 import System.IO.Unsafe (unsafePerformIO)
 
+import Control.Monad
 import Control.Monad.Reader
 import Control.Monad.State
 
 import Data.Fixed
+import qualified Data.Map.Strict as Map
+
 
 default (Value)
         
@@ -55,12 +58,24 @@ sendUpdateMsg filename = sendMessage "/TimeLines/load" filename
 -- | a "load" message to SCLang
 sendParam :: Param -> Signal Value -> ReaderT SynthID IO ThreadId
 sendParam p sig = do
-  synthName <- ask
-  let filepath = synthName ++ "_" ++ p ++ ".w64"
+  synthID <- ask
+  let synthAndParam = synthID ++ "_" ++ p 
+      filepath = pathToTemp ++ synthAndParam ++ ".w64"
   -- Spawn a new thread to write the file and send the update message
-  liftIO $ forkIO $ do
-    writeParamFile filepath sig
-    sendUpdateMsg filepath
+  liftIO $ do
+    modifyIORef signalMapRef (Map.insert filepath sig)
+    writeAndSend (filepath, sig)
+
+writeAndSend :: (String, Signal Value) -> IO ThreadId
+writeAndSend (filepath, sig) = forkIO $ do
+  writeParamFile filepath sig
+  sendUpdateMsg filepath 
+
+writeAllAndSend :: IO [ThreadId]
+writeAllAndSend = do
+  m <- readIORef signalMapRef
+  mapM writeAndSend (Map.toList m)
+
 
 -- | Convenience operator to be used while playing
 (<><) = sendParam
@@ -72,8 +87,18 @@ SynthID and prepends it to its filename so
 that SCLang knows where to apply it
 -}
 synth :: SynthID -> ReaderT SynthID IO ThreadId -> IO ThreadId
-synth synthID params = forkIO $ do
-  pathToTemp <- getTempDirectory
-  runReaderT params $ pathToTemp ++ synthID
+synth synthID param = forkIO $ do
+  runReaderT param synthID
   return ()
 
+pathToTemp :: FilePath
+pathToTemp = unsafePerformIO getTempDirectory
+
+{-# NOINLINE signalMapRef #-}
+signalMapRef :: IORef (Map.Map String (Signal Value))
+signalMapRef = unsafePerformIO $ newIORef $ Map.empty
+
+getMapSize :: IO ()
+getMapSize = do
+  map <- readIORef signalMapRef
+  print $ Map.size map
