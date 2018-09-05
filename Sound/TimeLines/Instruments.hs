@@ -6,6 +6,9 @@ import Sound.TimeLines.Constants
 import Data.Fixed
 import Control.Applicative
 
+
+
+
 --TODO: test
 {-
 arpeggio :: ChordProg -> Signal Value -> Signal Value -> Signal Value
@@ -22,6 +25,12 @@ scaleToChords scale = map f [0..l]
   where l = length scale
         f = \x -> [scale!!x, scale!!((x+2)%l), scale!!((x+4)%l)]
 -}
+
+range lo hi sig = lo + f*sig
+  where f = hi - lo
+
+realTime phasor dur mult = (fast mult phasor) * (dur/mult) 
+
 
 -- | Indexes into a number of unipolar random numbers using a phasor
 randoms :: Signal Value -> Signal Value -> Signal Value -> Signal Value
@@ -85,9 +94,12 @@ fract x =  x - (fromIntegral $ truncate x)
 flor :: Signal Value -> Signal Value 
 flor s = Signal $ \t -> fromIntegral $ floor (runSig s t)
 
+binaryRand s = flor $ mul 2 $ rand s
+
+
 -- | Indexes into a pseudo-random domain using a signal
 rand :: (RealFrac a, Floating a) => Signal a -> Signal a
-rand s = Signal $ \t -> fract $ (sin $ runSig s t)*99999999
+rand s = Signal $ \t -> fract $ (0.5 + 0.5 * (sin $ runSig s t))*1293984.31323
 
 -- | Speeds up a signal by an amount
 speed :: Signal Value -> Signal a -> Signal a
@@ -238,7 +250,7 @@ pow = flip (**)
 --step p t = if (t < p) then 0 else 1
 -- Takes a point, time, and a value, returning
 -- an identity number before point and the value after
-
+{-
 step p v = Signal $ \t ->
   if (t < runSig p t) then 0 else (runSig v t)
 
@@ -272,9 +284,9 @@ switch1 s e v = Signal $ \t ->
 
 {-
 env atk rel c1 c2 t
-  | t > atk + rel = 0
-  | t < atk = (t/atk)**c1
-  | otherwise = (1 - (t-atk)/rel)**c2
+
+
+
 -}
 
 -- need to test
@@ -283,9 +295,43 @@ env atk crv1 rel crv2 t =
       phase2 = mul (switchT atk (atk+rel) t) $ (1 - (t-atk)/rel)**crv2
   in  phase1 + phase2
 
+-}
+
+
+--switch s e sig = 
 
 divd x = mul (1/x)
 
+
+envAD atk rel crv1 crv2 phasor = Signal $ \t ->
+  let a = runSig atk t
+      r = runSig rel t
+      c1 = runSig crv1 t
+      c2 = runSig crv2 t
+      t' = runSig phasor t
+      v
+        | t' > a + r = 0
+        | t' < a = (t'/a)**c1
+        | otherwise = (1 - (t'-a)/r)**c2
+  in  v
+
+switch0 s e phasor sig = Signal $ \t ->
+  let t' = runSig phasor t
+  in  if (t' < s || t' > e) then 0 else runSig sig t
+
+switch1 s e phasor sig = Signal $ \t ->
+  let t' = runSig phasor t
+  in  if (t' < s || t' > e) then 1 else runSig sig t
+
+
+{-
+envR :: Signal Value -> Signal Value -> Signal Value -> Signal Value -> Signal Value -> Signal Value
+envR atk rel crv1 crv2 phasor = 
+  let phase1 = mul (switchT 0 atk phasor) $ pow crv1 (phasor/atk)
+      phase2 = mul (switchT atk (atk+rel) phasor) $ (1 - (pow crv2 (phasor-atk)/rel))
+  in  saturate $ phase1 + phase2
+
+-}
 
 
 {-
