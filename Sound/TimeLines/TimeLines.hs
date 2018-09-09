@@ -3,7 +3,7 @@ module Sound.TimeLines.TimeLines where
 import qualified Sound.File.Sndfile as SF
 
 --import System.IO as IO
-import Data.IORef (IORef, newIORef, readIORef, writeIORef, modifyIORef)
+import Data.IORef (IORef, newIORef, readIORef, writeIORef, modifyIORef')
 
 import Sound.TimeLines.Types
 import Sound.TimeLines.Util
@@ -63,7 +63,7 @@ sendParam p sig = do
       filepath = pathToTemp ++ synthAndParam ++ ".w64"
   -- Spawn a new thread to write the file and send the update message
   liftIO $ do
-    modifyIORef signalMapRef (Map.insert filepath sig)
+    modifyIORef' signalMapRef (Map.insert filepath sig)
     writeAndSend (filepath, sig)
 
 writeAndSend :: (String, Signal Value) -> IO ThreadId
