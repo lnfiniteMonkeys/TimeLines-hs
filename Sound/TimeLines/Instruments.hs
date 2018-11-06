@@ -3,10 +3,9 @@ module Sound.TimeLines.Instruments where
 import Prelude as Pr
 import Sound.TimeLines.Types
 import Sound.TimeLines.Constants
+import Sound.TimeLines.Util
 import Data.Fixed
 import Control.Applicative
-
-
 
 
 --TODO: test
@@ -117,14 +116,14 @@ slow (Signal amt) (Signal sf) = Signal $ \t -> sf $ t/(amt t)
 -- | Takes bpm, number of beats in a bar, and number of bars
 -- | and returns two phasors, one for beat and one for bar,
 -- | and the beat, bar, and total durations
-bpmToPhasors :: Signal Value -> Signal Value -> Signal Value -> (Signal Value, Signal Value, Signal Value, Signal Value, Signal Value)
+bpmToPhasors :: Signal Value -> Signal Value -> Signal Value -> (Signal Value, Signal Value, Signal Value, Signal Value, Time)
 bpmToPhasors bpm numBeats numBars =
   let beatDur = 60/bpm
       barDur = numBeats*beatDur
       totalDur = barDur*numBars
       phasorBeat = wrap01 $ t/beatDur
       phasorBar = wrap01 $ t/barDur
-  in  (phasorBeat, phasorBar, beatDur, barDur, totalDur)
+  in  (phasorBeat, phasorBar, beatDur, barDur, constSigToValue totalDur)
 
 
 -- | Takes two signals and returns 1 if both of them are 1,

@@ -15,9 +15,14 @@ import Sound.TimeLines.Util
 
 -- | Takes a path and an argument (both strings)
 -- | and sends them to SCLang
-sendMessage :: String -> String -> IO()
+sendMessage :: String -> String -> IO ()
 sendMessage path str = do
   let m = OSC.Message path [OSC.string str]
+  FD.sendOSC globalUDPRef m
+
+sendMessages :: String -> [String] -> IO ()
+sendMessages path strs = do
+  let m = OSC.Message path $ map OSC.string strs
   FD.sendOSC globalUDPRef m
 
 -- | Sends a "reset" message to SCLang
@@ -27,25 +32,6 @@ reset = do
   (s, e) <- readIORef globalWindowRef
   let dur = e - s
   sendMessage "/TimeLines/setWindow" (show dur)
-
--- | Updates the global time Window
-window :: Signal Time -> Signal Time -> IO Window
-window s e = do
-  let  s' = constSigToValue s
-       e' = constSigToValue e
-       dur = e'- s'
-  sendMessage "/TimeLines/setWindow" $ show dur
-  writeIORef globalWindowRef (s', e')
-  return (s', e')
-
--- | Global reference of the time Window over which
--- | to render each TimeLine
-{-# NOINLINE globalWindowRef #-}
--- the "NOINLINE" statement makes sure to never
--- replace globalWindowRef with its body, thus creating
--- another IORef
-globalWindowRef :: IORef Window
-globalWindowRef = unsafePerformIO $ newIORef (0, 1)
 
 -- | The port at which SCLang is expecting communication
 -- | (default = 57120)

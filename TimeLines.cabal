@@ -32,7 +32,10 @@ library
     , hosc
     , hsndfile
     , mtl
-    , containers                                  
+    , containers
+    , async
+    , filepath
+                        
   exposed-modules:
       Sound.TimeLines.Context
       Sound.TimeLines.TimeLines
