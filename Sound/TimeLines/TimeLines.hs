@@ -1,104 +1,119 @@
 module Sound.TimeLines.TimeLines where
 
 import qualified Sound.File.Sndfile as SF
-
---import System.IO as IO
 import Data.IORef (IORef, newIORef, readIORef, writeIORef, modifyIORef')
 
 import Sound.TimeLines.Types
 import Sound.TimeLines.Util
-import Sound.TimeLines.OSC
-
+import Sound.TimeLines.OSC (sendMessages, sendMessage)
 --
-import Control.Concurrent (forkIO, ThreadId)
+import Control.Concurrent (forkIO)
+import Control.Concurrent.Async (mapConcurrently)
 import System.IO.Unsafe (unsafePerformIO)
 
-import Control.Monad
-import Control.Monad.Reader
-import Control.Monad.State
-
-import Data.Fixed
+--import Data.Functor.Identity (Identity)
+--import Control.Monad
+import Control.Monad.Writer --(Writer, execWriter, tell)
+--import Control.Monad.Reader
+--import Control.Monad.State
+--import Data.Fixed
 import qualified Data.Map.Strict as Map
 
+-- | Interface function that groups synths together and evaluates them
+session :: Writer [SynthWithID] () -> IO ()
+session synthWriters = do
+  let newList = execWriter synthWriters
+  modifyIORef' globalSessionRef $ replaceSessionSynths newList
+  evalSession
 
-default (Value)
-        
--- | Takes a TimeLine, writes it to a file, and returns number of frames written
-writeTL :: TimeLine Double -> IO Int
-writeTL tl@(TimeLine sig info) = do
-  let fileName = infParam info
-  _ <- removeFileIfExists fileName
-  h <- openHandle info
-  arrayPtr <- getArrayPtr tl
-  framesWritten <- SF.hPutBuf h arrayPtr $ infNumFrames info --infoSR info
+-- | A function that evaluates all synths in the current
+-- | session over the current window
+evalSession :: IO ()
+evalSession = do
+  (Session synths w _) <- readIORef globalSessionRef
+  mapM (forkIO . flip evalSynthWithID w) synths
+  return ()
+
+-- | Evaluate a synth, writing all its parameters to files
+-- | and, once they're all written, sending the message to
+-- | update on the server
+evalSynthWithID :: SynthWithID -> Window -> IO ()
+evalSynthWithID (synthID, synth) w = do
+  filePaths <- mapConcurrently (writeSingleParam synthID w) synth
+  sendLoadMsgs filePaths
+  return ()
+
+-- | Takes a param and a signal, evaluates it over the current window
+-- | writes it to a file, and returns its filepath
+writeSingleParam :: SynthID -> Window -> ParamSignal -> IO String
+writeSingleParam synthID w pSig@(p, (sig, sr)) = do
+  let filePath = pathToTemp ++ synthID ++ "_" ++ p ++ ".w64"
+      ftl = FTL pSig w
+  _ <- removeFileIfExists filePath
+  h <- openHandle filePath ftl
+  arrayPtr <- getArrayPtr ftl
+  framesWritten <- SF.hPutBuf h arrayPtr $ ftlNumSteps ftl
   closeHandle h
-  return framesWritten
+  return filePath
 
---Renders all timelines with the new Window
---writeAllTimelines = undefined
---find which parameters are defined, get their signal, render it
---over the current window, reload buffers
+-- | Interface function that registers signals to a synth
+paramInterface :: Param -> Signal Value -> Writer [ParamSignal] ()
+paramInterface p sig =  tell [(p, (sig, fromIntegral defaultSamplingRate))]
+(<><) = paramInterface
 
--- | Samples a timeline over the current window and writes it to a file
-writeParamFile :: Param -> Signal Value -> IO()
-writeParamFile name sig = do
-  currentWindow <- readIORef globalWindowRef
-  let info = defaultInfo currentWindow name
---  DIR.createDirectoryIfMissing True getTempDir
-  framesWritten <- writeTL $ TimeLine sig info
-  return ()
+-- | Same as above but with user-defined sampling rate
+paramInterfaceSR :: Param -> SamplingRate -> Signal Value -> Writer [ParamSignal] ()
+paramInterfaceSR p sr sig = tell [(p, (sig, sr))]
+(<<><) = paramInterfaceSR
 
--- | Sends a message to SCLang to load a certain file
--- | in a buffer and update the respective synth
-sendUpdateMsg :: String -> IO()
-sendUpdateMsg filename = sendMessage "/TimeLines/load" filename
+-- | Interface function that groups params
+synth :: SynthID -> Writer [ParamSignal] () -> Writer [SynthWithID] ()
+synth id params = tell [synthWithID]
+  where synthWithID = (id, ps)
+        ps = execWriter params
 
--- | Reads the context of a parameter (i.e. the synth name), writes
--- | the timeline to a file with the appropriate name, and sends
--- | a "load" message to SCLang
-sendParam :: Param -> Signal Value -> ReaderT SynthID IO ThreadId
-sendParam p sig = do
-  synthID <- ask
-  let synthAndParam = synthID ++ "_" ++ p 
-      filepath = pathToTemp ++ synthAndParam ++ ".w64"
-  -- Spawn a new thread to write the file and send the update message
-  liftIO $ do
-    modifyIORef' signalMapRef (Map.insert filepath sig)
-    writeAndSend (filepath, sig)
+plugSynthTo :: SynthID -> SynthID -> IO ()
+plugSynthTo src dst = sendMessages "TimeLines/plug" [src, dst]
+(>>>) = plugSynthTo
 
-writeAndSend :: (String, Signal Value) -> IO ThreadId
-writeAndSend (filepath, sig) = forkIO $ do
-  writeParamFile filepath sig
-  sendUpdateMsg filepath 
+-- | Update the session's window, re-evaluate all synths
+-- | and update the server's timer
+window :: Window -> IO ()
+window w@(s, e) = do
+  modifyIORef' globalSessionRef $ replaceSessionWindow w
+  sendMessage "/TimeLines/setWindow" durStr
+  evalSession
+    where durStr = show $ e - s
 
-writeAllAndSend :: IO [ThreadId]
-writeAllAndSend = do
-  m <- readIORef signalMapRef
-  mapM writeAndSend (Map.toList m)
+-- | Same as above but without sending a message to the server
+window' :: Window -> IO ()
+window' w = do
+  modifyIORef' globalSessionRef $ replaceSessionWindow w
+  evalSession
+  
+replaceSessionSynths :: [SynthWithID] -> Session -> Session
+replaceSessionSynths newList (Session _ w m) = Session newList w m
 
+replaceSessionWindow :: Window -> Session -> Session
+replaceSessionWindow newWindow (Session list _ m) = Session list newWindow m
 
--- | Convenience operator to be used while playing
-(<><) = sendParam
+sendLoadMsgs :: [String] -> IO ()
+sendLoadMsgs filepaths = sendMessages "/TimeLines/load" filepaths
 
-{-|
-Provides the context for a synth by means of
-the SynthID. Each Signal provided reads the
-SynthID and prepends it to its filename so
-that SCLang knows where to apply it
--}
-synth :: SynthID -> ReaderT SynthID IO ThreadId -> IO ThreadId
-synth synthID param = forkIO $ do
-  runReaderT param synthID
-  return ()
+printNumSynths :: IO ()
+printNumSynths = do
+  (Session list _ _) <- readIORef globalSessionRef
+  putStrLn $ (++) "Number of running synths: " $ show $ length list
 
+printWindow :: IO ()
+printWindow = do
+  (Session _ w _) <- readIORef globalSessionRef
+  putStrLn $ (++) "Current window: " $ show w
+
+printMode :: IO ()
+printMode = do
+  (Session _ _ m) <- readIORef globalSessionRef
+  putStrLn $ (++) "Current mode: " $ show m
+  
 pathToTemp :: FilePath
-pathToTemp = unsafePerformIO getTempDirectory
-
-{-# NOINLINE signalMapRef #-}
-signalMapRef :: IORef (Map.Map String (Signal Value))
-signalMapRef = unsafePerformIO $ newIORef $ Map.empty
-
-getMapSize :: IO ()
-getMapSize = do
-  map <- readIORef signalMapRef
-  print $ Map.size map
+pathToTemp = unsafePerformIO getTLTempDir

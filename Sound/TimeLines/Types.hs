@@ -6,12 +6,20 @@ module Sound.TimeLines.Types
     ,Chord
     ,Scale
     ,ChordProg
-    ,TLinfo(..)
-    ,TimeLine(..)
     ,SynthID
+    ,Synth
+    ,SynthWithID(..)
     ,Param
-    ,infNumFrames
-    ,defaultInfo
+    ,ControlSignal
+    ,ParamSignal
+    ,SamplingRate
+    ,FiniteTimeLine(..)
+    ,Session(..)
+    ,ftlSR
+    ,globalSessionRef
+    ,globalWindowRef
+--    ,defaultFTL
+    ,defaultSamplingRate
     ,t
     ,constSig
     ,lazyMul
@@ -20,6 +28,12 @@ module Sound.TimeLines.Types
 import Prelude as Pr
 import Control.Applicative
 import Control.Monad
+import Data.Map.Strict as Map
+import Data.IORef
+import System.IO.Unsafe (unsafePerformIO)
+import Control.Concurrent (forkIO, ThreadId)
+import Control.Concurrent.Async (mapConcurrently)
+import Control.Monad.Writer
 
 
 -- | The type actually written to files
@@ -33,12 +47,59 @@ type Time = Double
 -- | with start and end points
 type Window = (Time, Time)
 
+-- | Global reference of the time Window over which
+-- | to render each TimeLine
+{-# NOINLINE globalWindowRef #-}
+-- the "NOINLINE" statement makes sure to never
+-- replace globalWindowRef with its body, thus creating
+-- another IORef
+globalWindowRef :: IORef Window
+globalWindowRef = unsafePerformIO $ newIORef (0, 1)
+
 -- | Represents the rate at which a Signal is to be sampled
 type SamplingRate = Int
 -- | Represents the name of a synth stored on the server
 type SynthID = String
 -- | Represents the name of a SynthDef's parameter
 type Param = String
+-- | A parameter name and the signal to control it
+type ControlSignal = (Signal Value, SamplingRate)
+-- | Every synth has one of those, a list of parameters and signals
+--type ParamMap = Map.Map Param ControlSignal
+-- | A synth with a name and a map of signals
+type ParamSignal = (Param, ControlSignal)
+
+type Synth = [ParamSignal]
+
+type SynthWithID = (SynthID, Synth)
+
+data SessionMode = Static | Dynamic
+  deriving Show
+
+data Session = Session {synthList::[SynthWithID],
+                        sessionWindow::Window,
+                        sessionMode::SessionMode
+                       }
+
+data FiniteTimeLine = FTL {ftlParamSig::ParamSignal,
+                           ftlWindow::Window
+                          }
+
+ftlSR :: FiniteTimeLine -> SamplingRate
+ftlSR (FTL (_, (_, sr)) _) = sr
+
+-- | The default sampling rate
+defaultSamplingRate = 700 
+
+-- | Default empty session
+defaultSession :: Session
+defaultSession = Session [] (0, 1) Static
+
+-- | A global reference to the current session
+{-# NOINLINE globalSessionRef #-}
+globalSessionRef :: IORef Session
+globalSessionRef = unsafePerformIO $ newIORef defaultSession
+
 
 {- ?
 type Scale = [Value] --> used as "Signal Scale"
@@ -91,7 +152,7 @@ instance Monad Signal where
                                         sigB = f firstResult
                                     in  runSig sigB t
 
--- | Lazy multiplicator, doesn't evaluate the second
+-- | Lazy multiplicator, doesn't evauate the second
 -- | term if first term is equal to 0
 lazyMul :: (Num a, Eq a) => a -> a -> a
 lazyMul 0 _ = 0
@@ -132,40 +193,4 @@ instance (Floating a, Eq a) => Floating (Signal a) where
   asinh = fmap asinh
   atanh = fmap atanh
   acosh = fmap acosh
-
--- | A TLinfo holds all the information needed
--- | to sample a Signal, such as the Window, the
--- | sampling rate, and a string denoting which
--- | parameter of the synth it controls
-data TLinfo = TLinfo {infWindow::Window,
-                      infSR::SamplingRate,
-                      infParam::String
-                     }
-              deriving (Eq, Show)
-
--- | Calculates the duration, in seconds, of a TLinfo
-infDur :: TLinfo -> Time
-infDur (TLinfo (s, e) _ _) = e - s
-
--- | Calculates the number of frames that will be sampled
--- | and written to file
-infNumFrames :: TLinfo -> Int
-infNumFrames i = Pr.floor $ infDur i * fromIntegral (infSR i)
-
--- | The default sampling rate
-defaultSampleRate = 700 -- make it an IORef?
-
--- | Returns the a default TLinfo given a window and a Param
-defaultInfo :: Window -> Param -> TLinfo
-defaultInfo w p = TLinfo w defaultSampleRate p
-
-{-|
-A TimeLine is the result of observing and sampling
-a Signal over a certain Window, what actually gets
-written to disk. It is made up of a Signal and an
-accompanying TLinfo.
--}
-data TimeLine a = TimeLine {tlSig :: Signal a,
-                            tlInfo :: TLinfo
-                           }
 
