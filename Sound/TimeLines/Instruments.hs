@@ -191,11 +191,9 @@ sqr :: Signal Value -> Signal Value
 sqr = sign . sin
 
 -- Convenience functions for use with $
--- add :: (Num a) => Signal a -> Signal a -> Signal a
+--add :: (Num a) => Signal a -> Signal a -> Signal a
 add = liftA2 (+)
-
 mul = liftA2 lazyMul
---mul = (*.)
 
 
 --Ken Perlin, "Texturing and Modeling: A Procedural Approach"
