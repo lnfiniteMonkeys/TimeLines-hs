@@ -11,28 +11,46 @@ import Control.Concurrent (forkIO)
 import Control.Concurrent.Async (mapConcurrently)
 import System.IO.Unsafe (unsafePerformIO)
 
---import Data.Functor.Identity (Identity)
---import Control.Monad
-import Control.Monad.Writer --(Writer, execWriter, tell)
---import Control.Monad.Reader
---import Control.Monad.State
---import Data.Fixed
+import Control.Monad.Writer (Writer, execWriter, tell)
 import qualified Data.Map.Strict as Map
 
+type Collection a = Writer [a] ()
+
+gatherCollection :: Collection a -> [a]
+gatherCollection = execWriter
+
+register :: a -> Collection a
+register a = tell [a]
+
+registerSynth :: SynthWithID -> Collection Action
+registerSynth = register . ActionSynth
+
+registerPlug :: Plug -> Collection Action
+registerPlug = register . ActionPlug
+
 -- | Interface function that groups synths together and evaluates them
-session :: Writer [SynthWithID] () -> IO ()
-session synthWriters = do
-  let newList = execWriter synthWriters
-  modifyIORef' globalSessionRef $ replaceSessionSynths newList
+session :: Collection Action -> IO ()
+session as = do
+  modifyIORef' globalSessionRef $ replaceActions $ gatherCollection as
   evalSession
 
 -- | A function that evaluates all synths in the current
 -- | session over the current window
 evalSession :: IO ()
 evalSession = do
-  (Session synths w _) <- readIORef globalSessionRef
-  mapM (forkIO . flip evalSynthWithID w) synths
-  return ()
+  sess@(Session actions w _) <- readIORef globalSessionRef
+  let synths = synthList sess
+      plugs = plugList sess
+  evalSynths synths w
+  evalPlugs plugs
+  sendMessages "/TimeLines/synthNames" $ [fst s | s <- synths]
+
+-- TODO
+evalPlugs :: [Plug] -> IO ()
+evalPlugs = undefined
+
+evalSynths :: [SynthWithID] -> Window -> IO ()
+evalSynths synths w = mapM_ (forkIO . flip evalSynthWithID w) synths
 
 -- | Evaluate a synth, writing all its parameters to files
 -- | and, once they're all written, sending the message to
@@ -41,7 +59,6 @@ evalSynthWithID :: SynthWithID -> Window -> IO ()
 evalSynthWithID (synthID, synth) w = do
   filePaths <- mapConcurrently (writeSingleParam synthID w) synth
   sendLoadMsgs filePaths
-  return ()
 
 -- | Takes a param and a signal, evaluates it over the current window
 -- | writes it to a file, and returns its filepath
@@ -57,20 +74,20 @@ writeSingleParam synthID w pSig@(p, (sig, sr)) = do
   return filePath
 
 -- | Interface function that registers signals to a synth
-paramInterface :: Param -> Signal Value -> Writer [ParamSignal] ()
-paramInterface p sig =  tell [(p, (sig, fromIntegral defaultSamplingRate))]
+paramInterface :: Param -> Signal Value -> Collection ParamSignal
+paramInterface p sig = register (p, (sig, fromIntegral defaultSamplingRate))
 (<><) = paramInterface
 
 -- | Same as above but with user-defined sampling rate
-paramInterfaceSR :: Param -> SamplingRate -> Signal Value -> Writer [ParamSignal] ()
-paramInterfaceSR p sr sig = tell [(p, (sig, sr))]
+paramInterfaceSR :: Param -> SamplingRate -> Signal Value -> Collection ParamSignal
+paramInterfaceSR p sr sig = register (p, (sig, sr))
 (<<><) = paramInterfaceSR
 
 -- | Interface function that groups params
-synth :: SynthID -> Writer [ParamSignal] () -> Writer [SynthWithID] ()
-synth id params = tell [synthWithID]
+synth :: SynthID -> Collection ParamSignal -> Collection Action
+synth id params = registerSynth synthWithID
   where synthWithID = (id, ps)
-        ps = execWriter params
+        ps = gatherCollection params
 
 plugSynthTo :: SynthID -> SynthID -> IO ()
 plugSynthTo src dst = sendMessages "TimeLines/plug" [src, dst]
@@ -91,20 +108,25 @@ window' w = do
   modifyIORef' globalSessionRef $ replaceSessionWindow w
   evalSession
   
-replaceSessionSynths :: [SynthWithID] -> Session -> Session
-replaceSessionSynths newList (Session _ w m) = Session newList w m
+replaceActions :: [Action] -> Session -> Session
+replaceActions newActions (Session _ w m) = Session newActions w m
 
 replaceSessionWindow :: Window -> Session -> Session
-replaceSessionWindow newWindow (Session list _ m) = Session list newWindow m
+replaceSessionWindow newWindow (Session as _ m) = Session as newWindow m
 
 sendLoadMsgs :: [String] -> IO ()
 sendLoadMsgs filepaths = sendMessages "/TimeLines/load" filepaths
 
 printNumSynths :: IO ()
 printNumSynths = do
-  (Session list _ _) <- readIORef globalSessionRef
-  putStrLn $ (++) "Number of running synths: " $ show $ length list
+  sess <- readIORef globalSessionRef
+  putStrLn $ (++) "Number of running synths: " $ show $ length $ synthList sess
 
+printPlugs :: IO ()
+printPlugs = do
+  sess <- readIORef globalSessionRef
+  print $ plugList sess
+  
 printWindow :: IO ()
 printWindow = do
   (Session _ w _) <- readIORef globalSessionRef

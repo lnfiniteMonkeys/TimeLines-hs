@@ -20,6 +20,9 @@ sendMessage path str = do
   let m = OSC.Message path [OSC.string str]
   FD.sendOSC globalUDPRef m
 
+sendTestMessage :: IO ()
+sendTestMessage = sendMessage "TimeLines" "test"
+
 sendMessages :: String -> [String] -> IO ()
 sendMessages path strs = do
   let m = OSC.Message path $ map OSC.string strs
@@ -32,6 +35,7 @@ reset = do
   (s, e) <- readIORef globalWindowRef
   let dur = e - s
   sendMessage "/TimeLines/setWindow" (show dur)
+  putStrLn "Server reset"
 
 -- | The port at which SCLang is expecting communication
 -- | (default = 57120)
@@ -42,4 +46,3 @@ scLangPort = 57120
 {-# NOINLINE globalUDPRef #-}
 globalUDPRef :: OSC.UDP
 globalUDPRef = unsafePerformIO $ OSC.openUDP "127.0.0.1" scLangPort
-

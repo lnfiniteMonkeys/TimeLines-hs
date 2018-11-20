@@ -1,5 +1,6 @@
 module Sound.TimeLines.Types
-  (  Signal(..)
+{-
+    (  Signal(..)
     ,Time
     ,Value
     ,Window
@@ -18,17 +19,18 @@ module Sound.TimeLines.Types
     ,ftlSR
     ,globalSessionRef
     ,globalWindowRef
---    ,defaultFTL
+    ,defaultFTL
     ,defaultSamplingRate
     ,t
     ,constSig
     ,lazyMul
-  ) where
+  )
+-} where
 
-import Prelude as Pr
+--import Prelude as Pr
 import Control.Applicative
 import Control.Monad
-import Data.Map.Strict as Map
+import qualified Data.Map.Strict as Map
 import Data.IORef
 import System.IO.Unsafe (unsafePerformIO)
 import Control.Concurrent (forkIO, ThreadId)
@@ -64,22 +66,48 @@ type SynthID = String
 type Param = String
 -- | A parameter name and the signal to control it
 type ControlSignal = (Signal Value, SamplingRate)
--- | Every synth has one of those, a list of parameters and signals
---type ParamMap = Map.Map Param ControlSignal
--- | A synth with a name and a map of signals
+
 type ParamSignal = (Param, ControlSignal)
 
 type Synth = [ParamSignal]
 
 type SynthWithID = (SynthID, Synth)
 
+type Plug = (SynthID, SynthID)
+
+data Action = ActionSynth SynthWithID
+            | ActionWindow Window
+            | ActionPlug Plug
+
 data SessionMode = Static | Dynamic
   deriving Show
 
-data Session = Session {synthList::[SynthWithID],
+data Session = Session {actions::[Action],
                         sessionWindow::Window,
                         sessionMode::SessionMode
                        }
+
+isSynth :: Action -> Bool
+isSynth (ActionSynth _) = True
+isSynth _ = False
+
+toSynth :: Action -> SynthWithID
+toSynth (ActionSynth s) = s
+toSynth _ = undefined
+
+synthList :: Session -> [SynthWithID]
+synthList = (map toSynth) . (filter isSynth) . actions
+
+isPlug :: Action -> Bool
+isPlug (ActionPlug _) = True
+isPlug _ = False
+
+toPlug :: Action -> Plug
+toPlug (ActionPlug p) = p
+toPlug _ = undefined
+
+plugList :: Session -> [Plug]
+plugList = (map toPlug) . (filter isSynth) . actions
 
 data FiniteTimeLine = FTL {ftlParamSig::ParamSignal,
                            ftlWindow::Window
@@ -99,7 +127,6 @@ defaultSession = Session [] (0, 1) Static
 {-# NOINLINE globalSessionRef #-}
 globalSessionRef :: IORef Session
 globalSessionRef = unsafePerformIO $ newIORef defaultSession
-
 
 {- ?
 type Scale = [Value] --> used as "Signal Scale"
@@ -157,10 +184,6 @@ instance Monad Signal where
 lazyMul :: (Num a, Eq a) => a -> a -> a
 lazyMul 0 _ = 0
 lazyMul a b = a * b
-
--- | Shortcut for being able to use
--- | "$" with the RHS expression
-mul = lazyMul
 
 --NUM
 instance (Num a, Eq a) => Num (Signal a) where
