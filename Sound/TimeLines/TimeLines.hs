@@ -3,63 +3,156 @@ module Sound.TimeLines.TimeLines where
 import qualified Sound.File.Sndfile as SF
 import Data.IORef (IORef, newIORef, readIORef, writeIORef, modifyIORef')
 
+import Numeric (showFFloat)
+
 import Sound.TimeLines.Types
 import Sound.TimeLines.Util
-import Sound.TimeLines.OSC (sendMessages, sendMessage)
---
+import Sound.TimeLines.OSC (sendMessages, sendMessage, udpServer, sendResetMsg)
+import Sound.TimeLines.Globals (globalSessionRef)
 import Control.Concurrent (forkIO)
 import Control.Concurrent.Async (mapConcurrently)
 import System.IO.Unsafe (unsafePerformIO)
 
+import Control.Monad (void, when)
 import Control.Monad.Writer (Writer, execWriter, tell)
 import qualified Data.Map.Strict as Map
 
-type Collection a = Writer [a] ()
 
-gatherCollection :: Collection a -> [a]
-gatherCollection = execWriter
+{- INTERFACE FUNCTIONS -}
 
-register :: a -> Collection a
-register a = tell [a]
+-- | A session in which the window is explicit and static
+-- | (that window can be either looped or one-shot trigerred)
+finiteSession :: Window -> Collector Action -> IO ()
+finiteSession w as = do
+  let newSess = Session (executeCollector as) w FiniteMode
+  writeIORef globalSessionRef newSess
+  evalSession newSess
 
-registerSynth :: SynthWithID -> Collection Action
-registerSynth = register . ActionSynth
+-- | A session in which time constantly and infinitely
+-- | increases (with the option of resetting it at any point)
+infiniteSession :: Collector Action -> IO ()
+infiniteSession as = do
+  (Session _ w prevMode) <- readSessionRef
+  -- Reset window if previous session was finite
+  let newSess = Session (executeCollector as) newWindow InfiniteMode
+      newWindow = case prevMode of
+        FiniteMode -> (0, windowStep)
+        InfiniteMode -> w
+  writeSessionRef newSess
 
-registerPlug :: Plug -> Collection Action
-registerPlug = register . ActionPlug
+-- | Interface function that groups params into Synths
+synth :: SynthID -> Collector ParamSignal -> Collector Action
+synth id params = registerSynthAction (id, executeCollector params)
 
--- | Interface function that groups synths together and evaluates them
-session :: Collection Action -> IO ()
-session as = do
-  modifyIORef' globalSessionRef $ replaceActions $ gatherCollection as
-  evalSession
-
--- | A function that evaluates all synths in the current
--- | session over the current window
-evalSession :: IO ()
-evalSession = do
-  sess@(Session actions w _) <- readIORef globalSessionRef
-  let synths = synthList sess
-      plugs = plugList sess
-  evalSynths synths w
-  evalPlugs plugs
-  sendMessages "/TimeLines/synthNames" $ [fst s | s <- synths]
+-- | Ignores a synth
+mute :: Collector Action -> Collector Action
+mute s = register EmptyAction
 
 -- TODO
-evalPlugs :: [Plug] -> IO ()
-evalPlugs = undefined
+solo = undefined
 
-evalSynths :: [SynthWithID] -> Window -> IO ()
-evalSynths synths w = mapM_ (forkIO . flip evalSynthWithID w) synths
+-- | Interface function that registers signals to a Synth
+addParam :: Param -> Signal Value -> Collector ParamSignal
+addParam p sig = registerParam (p, (sig, fromIntegral defaultSamplingRate))
+(<><) = addParam
+
+-- | Same as above, but with user-defined sampling rate
+addParamSR :: Param -> SamplingRate -> Signal Value -> Collector ParamSignal
+addParamSR p sr sig = registerParam (p, (sig, sr))
+(<><<) = addParamSR
+
+-- | Register a patch between two synths
+patchSynths :: SynthID -> SynthID -> Collector Action
+patchSynths src dst = registerPatchAction (src, dst)
+(->>) = patchSynths
+
+
+{- /INTERFACE FUNCTIONS -}
+------------
+
+-- | OSC receiving server
+setupOSC :: IO ()
+setupOSC = udpServer incrementAndEvalIfInfinite
+
+incrementAndEvalIfInfinite :: IO ()
+incrementAndEvalIfInfinite = do
+  sess <- readSessionRef
+  when (isInfiniteSession sess) $ do
+    let newSess = incrementWindowBy sess windowStep
+    writeSessionRef newSess
+    evalSession newSess
+
+isInfiniteSession :: Session -> Bool
+isInfiniteSession (Session _ _ m) = m == InfiniteMode
+
+readSessionRef :: IO Session
+readSessionRef = readIORef globalSessionRef >>= return
+
+writeSessionRef :: Session -> IO ()
+writeSessionRef = writeIORef globalSessionRef
+
+-- | Fixed increment by which the window increases in an infinite session
+windowStep :: Time
+windowStep = 1
+
+incrementWindowBy :: Session -> Time -> Session
+incrementWindowBy (Session as (s, e) m) amt = 
+  Session as (s+amt, e+amt) m
+
+reset :: IO ()
+reset = do
+  (Session as _ m) <- readIORef globalSessionRef
+  let w = case m of
+        FiniteMode -> (0, 1)
+        InfiniteMode -> (0, windowStep)
+  writeIORef globalSessionRef $ Session [] w m
+  --sendResetMsg
+  
+------------
+{- Eval functions -}
+-- | Evaluate all actions in the current Session
+-- | and update the server
+evalSession :: Session -> IO ()
+evalSession sess@(Session _ w m) = void . forkIO $ do
+  evalAndSendSynths (synthList sess) w
+  sendSynthNames sess
+  evalAndSendPatches $ patchList sess
+  case m of
+    FiniteMode -> sendWindow w
+    InfiniteMode -> sendMessage "/TimeLines/setWindow"
+      $ Numeric.showFFloat Nothing windowStep ""
+
+evalCurrSession :: IO ()
+evalCurrSession = readIORef globalSessionRef >>= evalSession
+
+evalAndSendPatches :: [Patch] -> IO ()
+evalAndSendPatches p = do
+  sendMessages "/TimeLines/synthOrder" $ sortPatches p
+  sendMessages "/TimeLines/patches" $ flattenPatches p
+
+flattenPatches :: [Patch] -> [SynthID]
+flattenPatches [] = []
+flattenPatches ((s1, s2):ps) = [s1, s2] ++ flattenPatches ps
+
+evalAndSendSynths :: [SynthWithID] -> Window -> IO ()
+evalAndSendSynths synths w = mapM_ (forkIO . flip evalSynthWithID w) synths
+
+sendSynthNames :: Session -> IO ()
+sendSynthNames s = sendMessages "/TimeLines/synthNames" $ synthIDList s
+
+sendWindow :: Window -> IO ()
+sendWindow (s, e) = sendMessage "/TimeLines/setWindow" $ show $ e - s
 
 -- | Evaluate a synth, writing all its parameters to files
 -- | and, once they're all written, sending the message to
 -- | update on the server
+-- evalSynthWithID :: SynthWithID -> Window -> SynthGroup -> IO ()
 evalSynthWithID :: SynthWithID -> Window -> IO ()
 evalSynthWithID (synthID, synth) w = do
   filePaths <- mapConcurrently (writeSingleParam synthID w) synth
   sendLoadMsgs filePaths
 
+-- TODO: clean up
 -- | Takes a param and a signal, evaluates it over the current window
 -- | writes it to a file, and returns its filepath
 writeSingleParam :: SynthID -> Window -> ParamSignal -> IO String
@@ -73,25 +166,6 @@ writeSingleParam synthID w pSig@(p, (sig, sr)) = do
   closeHandle h
   return filePath
 
--- | Interface function that registers signals to a synth
-paramInterface :: Param -> Signal Value -> Collection ParamSignal
-paramInterface p sig = register (p, (sig, fromIntegral defaultSamplingRate))
-(<><) = paramInterface
-
--- | Same as above but with user-defined sampling rate
-paramInterfaceSR :: Param -> SamplingRate -> Signal Value -> Collection ParamSignal
-paramInterfaceSR p sr sig = register (p, (sig, sr))
-(<<><) = paramInterfaceSR
-
--- | Interface function that groups params
-synth :: SynthID -> Collection ParamSignal -> Collection Action
-synth id params = registerSynth synthWithID
-  where synthWithID = (id, ps)
-        ps = gatherCollection params
-
-plugSynthTo :: SynthID -> SynthID -> IO ()
-plugSynthTo src dst = sendMessages "TimeLines/plug" [src, dst]
-(>>>) = plugSynthTo
 
 -- | Update the session's window, re-evaluate all synths
 -- | and update the server's timer
@@ -99,34 +173,39 @@ window :: Window -> IO ()
 window w@(s, e) = do
   modifyIORef' globalSessionRef $ replaceSessionWindow w
   sendMessage "/TimeLines/setWindow" durStr
-  evalSession
+  evalCurrSession
     where durStr = show $ e - s
 
 -- | Same as above but without sending a message to the server
 window' :: Window -> IO ()
 window' w = do
   modifyIORef' globalSessionRef $ replaceSessionWindow w
-  evalSession
+  evalCurrSession
   
 replaceActions :: [Action] -> Session -> Session
 replaceActions newActions (Session _ w m) = Session newActions w m
 
-replaceSessionWindow :: Window -> Session -> Session
-replaceSessionWindow newWindow (Session as _ m) = Session as newWindow m
-
 sendLoadMsgs :: [String] -> IO ()
 sendLoadMsgs filepaths = sendMessages "/TimeLines/load" filepaths
+
+
+{- PRINT FUNCTIONS -}
 
 printNumSynths :: IO ()
 printNumSynths = do
   sess <- readIORef globalSessionRef
   putStrLn $ (++) "Number of running synths: " $ show $ length $ synthList sess
 
-printPlugs :: IO ()
-printPlugs = do
+printSynths :: IO ()
+printSynths = do
   sess <- readIORef globalSessionRef
-  print $ plugList sess
-  
+  putStrLn $ "Running synths:" ++ (show $ synthIDList sess)
+
+-- TODO: test
+printPatches :: [Patch] -> IO ()
+printPatches =
+  print . map (\(s1, s2) -> show $ s1 ++ "->>" ++ s2 ++ " ")
+
 printWindow :: IO ()
 printWindow = do
   (Session _ w _) <- readIORef globalSessionRef
@@ -139,3 +218,4 @@ printMode = do
   
 pathToTemp :: FilePath
 pathToTemp = unsafePerformIO getTLTempDir
+
