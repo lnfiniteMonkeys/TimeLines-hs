@@ -1,42 +1,9 @@
-module Sound.TimeLines.Types
-{-
-    (  Signal(..)
-    ,Time
-    ,Value
-    ,Window
-    ,Chord
-    ,Scale
-    ,ChordProg
-    ,SynthID
-    ,Synth
-    ,SynthWithID(..)
-    ,Param
-    ,ControlSignal
-    ,ParamSignal
-    ,SamplingRate
-    ,FiniteTimeLine(..)
-    ,Session(..)
-    ,ftlSR
-    ,globalSessionRef
-    ,globalWindowRef
-    ,defaultFTL
-    ,defaultSamplingRate
-    ,t
-    ,constSig
-    ,lazyMul
-  )
--} where
+module Sound.TimeLines.Types where
 
---import Prelude as Pr
 import Control.Applicative
 import Control.Monad
-import qualified Data.Map.Strict as Map
-import Data.IORef
-import System.IO.Unsafe (unsafePerformIO)
-import Control.Concurrent (forkIO, ThreadId)
-import Control.Concurrent.Async (mapConcurrently)
 import Control.Monad.Writer
-
+--import qualified Data.Map.Strict as Map
 
 -- | The type actually written to files
 -- | (default = Double)
@@ -45,88 +12,11 @@ type Value = Double
 -- | The type passed to Signals
 type Time = Double
 
--- | Type representing a section of time
--- | with start and end points
+-- | A section of time between start and end points
 type Window = (Time, Time)
 
--- | Global reference of the time Window over which
--- | to render each TimeLine
-{-# NOINLINE globalWindowRef #-}
--- the "NOINLINE" statement makes sure to never
--- replace globalWindowRef with its body, thus creating
--- another IORef
-globalWindowRef :: IORef Window
-globalWindowRef = unsafePerformIO $ newIORef (0, 1)
-
--- | Represents the rate at which a Signal is to be sampled
+-- | The rate at which a Signal is to be sampled
 type SamplingRate = Int
--- | Represents the name of a synth stored on the server
-type SynthID = String
--- | Represents the name of a SynthDef's parameter
-type Param = String
--- | A parameter name and the signal to control it
-type ControlSignal = (Signal Value, SamplingRate)
-
-type ParamSignal = (Param, ControlSignal)
-
-type Synth = [ParamSignal]
-
-type SynthWithID = (SynthID, Synth)
-
-type Plug = (SynthID, SynthID)
-
-data Action = ActionSynth SynthWithID
-            | ActionWindow Window
-            | ActionPlug Plug
-
-data SessionMode = Static | Dynamic
-  deriving Show
-
-data Session = Session {actions::[Action],
-                        sessionWindow::Window,
-                        sessionMode::SessionMode
-                       }
-
-isSynth :: Action -> Bool
-isSynth (ActionSynth _) = True
-isSynth _ = False
-
-toSynth :: Action -> SynthWithID
-toSynth (ActionSynth s) = s
-toSynth _ = undefined
-
-synthList :: Session -> [SynthWithID]
-synthList = (map toSynth) . (filter isSynth) . actions
-
-isPlug :: Action -> Bool
-isPlug (ActionPlug _) = True
-isPlug _ = False
-
-toPlug :: Action -> Plug
-toPlug (ActionPlug p) = p
-toPlug _ = undefined
-
-plugList :: Session -> [Plug]
-plugList = (map toPlug) . (filter isSynth) . actions
-
-data FiniteTimeLine = FTL {ftlParamSig::ParamSignal,
-                           ftlWindow::Window
-                          }
-
-ftlSR :: FiniteTimeLine -> SamplingRate
-ftlSR (FTL (_, (_, sr)) _) = sr
-
--- | The default sampling rate
-defaultSamplingRate = 700 
-
--- | Default empty session
-defaultSession :: Session
-defaultSession = Session [] (0, 1) Static
-
--- | A global reference to the current session
-{-# NOINLINE globalSessionRef #-}
-globalSessionRef :: IORef Session
-globalSessionRef = unsafePerformIO $ newIORef defaultSession
 
 {- ?
 type Scale = [Value] --> used as "Signal Scale"
@@ -138,31 +28,140 @@ type Scale = [Signal Value]
 type Chord = [Signal Value]
 type ChordProg = [Chord]
 
--- | The fundamental type of TimeLines.
--- | A Signal of type "a" is a function
--- | from Time to "a"
+-- | The name of a synth as stored on the server (including SynthDef)
+type SynthID = String
+
+type SynthGroup = String
+
+-- | The name of a SynthDef's parameter
+type Param = String
+
+-- | The fundamental type of TimeLines. A Signal of
+-- | type "a" is a function from Time to "a"
 newtype Signal a = Signal {runSig :: Time -> a}
 
--- | The time Signal, always returns the time
+-- | A parameter name and the signal to control it
+type ControlSignal = (Signal Value, SamplingRate)
+
+-- | A combination of a Control Signal and a Parameter to control
+type ParamSignal = (Param, ControlSignal)
+
+-- | A list of Param & Signal pairs
+type Synth = [ParamSignal]
+
+-- | A SynthID & Synth pair
+type SynthWithID = (SynthID, Synth)
+
+-- | A pair of Synths (Output, Input)
+type Patch = (SynthID, SynthID)
+
+-- | An Action can either be a Synth or a Path
+data Action = ActionSynth SynthWithID
+            | ActionPatch Patch
+            | EmptyAction
+
+-- | A Collection of objects to be registered along the way
+type Collector a = Writer [a] ()
+
+-- | Finite: Window is static and set by user, with optional looping.
+-- | Infinite: Window is constantly and infinitely increasing in fixed
+-- | increments, with optional resetting.
+data SessionMode = FiniteMode | InfiniteMode
+  deriving (Eq, Show)
+
+-- | A list of Actions, a Window, and a Mode
+data Session = Session {actions::[Action],
+                        sessionWindow::Window,
+                        sessionMode::SessionMode
+                       }
+
+-- | Everything needed to write a Param control buffer
+data FiniteTimeLine = FTL {ftlParamSig::ParamSignal,
+                           ftlWindow::Window
+                          }
+
+-- Defaults --
+defaultSamplingRate = 700 
+
+defaultSession :: Session
+defaultSession = Session [] (0, 1) InfiniteMode
+
+defaultSignal :: Signal Value
+defaultSignal = Signal (\t -> 0)
+
+
+-- Action Functions --
+isSynth :: Action -> Bool
+isSynth (ActionSynth _) = True
+isSynth _ = False
+
+toSynth :: Action -> SynthWithID
+toSynth (ActionSynth s) = s
+toSynth _ = undefined
+
+isPatch :: Action -> Bool
+isPatch (ActionPatch _) = True
+isPatch _ = False
+
+toPatch :: Action -> Patch
+toPatch (ActionPatch p) = p
+toPatch _ = undefined
+
+
+-- Session Functions --
+synthList :: Session -> [SynthWithID]
+synthList = map toSynth . filter isSynth . actions
+
+patchList :: Session -> [Patch]
+patchList = map toPatch . filter isPatch . actions
+
+synthIDList :: Session -> [SynthID]
+synthIDList = map fst . synthList
+
+-- FiniteTimeLine functions --
+ftlSR :: FiniteTimeLine -> SamplingRate
+ftlSR (FTL (_, (_, sr)) _) = sr
+
+
+-- Signal Functions --
+
+-- | The identity Signal, always returns the current time
 t :: Signal Value
 t = Signal $ \t -> t
 
--- | Takes any argument and raises it to
--- | a Signal that always returns that argument
+-- | Raises any argument to a constant signal of itself
 constSig :: a -> Signal a
 constSig v = Signal $ \t -> v
 
 
----------------------------INSTANCES---------------------------
+-- Collector Functions --
+executeCollector :: Collector a -> [a]
+executeCollector = execWriter
 
---FUNCTOR
+register :: a -> Collector a
+register a = tell [a]
+
+registerEmptyAction :: Collector Action
+registerEmptyAction = register EmptyAction
+
+registerSynthAction :: SynthWithID -> Collector Action
+registerSynthAction = register . ActionSynth
+
+registerPatchAction :: Patch -> Collector Action
+registerPatchAction = register . ActionPatch
+
+registerParam :: ParamSignal -> Collector ParamSignal
+registerParam = register
+
+  ---------------------------INSTANCES---------------------------
+-- FUNCTOR
 instance Functor Signal where
   fmap f (Signal sf) = Signal $ fmap f sf
   --Alternate implementation:
   --fmap f (Signal sf) = Signal $ \t -> f (sf t)
   (<$) = fmap . const
 
---APPLICATIVE
+-- APPLICATIVE
 instance Applicative Signal where
   -- Transform a value "a" to a signal of constant value "a"
   pure = constSig
@@ -172,7 +171,7 @@ instance Applicative Signal where
   -- a signal with function "x" of type "Time -> b", is equal to the value of f for
   -- Time t, applied to the value of x for Time t
 
---MONAD
+-- MONAD
 instance Monad Signal where
   return = pure
   (Signal s) >>= f = Signal $ \t -> let firstResult = s t
@@ -185,7 +184,7 @@ lazyMul :: (Num a, Eq a) => a -> a -> a
 lazyMul 0 _ = 0
 lazyMul a b = a * b
 
---NUM
+-- NUM
 instance (Num a, Eq a) => Num (Signal a) where
   negate      = fmap negate
   (+)         = liftA2 (+)
@@ -195,12 +194,12 @@ instance (Num a, Eq a) => Num (Signal a) where
   signum      = fmap signum
 
 
---FRACTIONAL
+-- FRACTIONAL
 instance (Fractional a, Eq a) => Fractional (Signal a) where
   fromRational = pure . fromRational
   recip = fmap recip
 
---FLOATING
+-- FLOATING
 instance (Floating a, Eq a) => Floating (Signal a) where
   pi    = pure pi
   sqrt  = fmap sqrt

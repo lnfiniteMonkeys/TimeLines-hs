@@ -35,6 +35,7 @@ library
     , containers
     , async
     , filepath
+    , array
                         
   exposed-modules:
       Sound.TimeLines.Context
