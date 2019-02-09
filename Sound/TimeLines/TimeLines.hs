@@ -1,22 +1,20 @@
 module Sound.TimeLines.TimeLines where
 
 import qualified Sound.File.Sndfile as SF
-import Data.IORef (IORef, newIORef, readIORef, writeIORef, modifyIORef')
-
-import Numeric (showFFloat)
 
 import Sound.TimeLines.Types
 import Sound.TimeLines.Util
 import Sound.TimeLines.OSC (sendMessages, sendMessage, udpServer, sendResetMsg)
 import Sound.TimeLines.Globals (globalSessionRef)
+
 import Control.Concurrent (forkIO)
 import Control.Concurrent.Async (mapConcurrently)
 import System.IO.Unsafe (unsafePerformIO)
-
 import Control.Monad (void, when)
 import Control.Monad.Writer (Writer, execWriter, tell)
+import Data.IORef (IORef, newIORef, readIORef, writeIORef, modifyIORef')
 import qualified Data.Map.Strict as Map
-
+import Numeric (showFFloat)
 
 {- INTERFACE FUNCTIONS -}
 
@@ -66,10 +64,8 @@ patchSynths :: SynthID -> SynthID -> Collector Action
 patchSynths src dst = registerPatchAction (src, dst)
 (->>) = patchSynths
 
-
-{- /INTERFACE FUNCTIONS -}
 ------------
-
+{- UPDATE LOOP -}
 -- | OSC receiving server
 setupOSC :: IO ()
 setupOSC = udpServer incrementAndEvalIfInfinite
@@ -96,7 +92,7 @@ writeSessionRef = writeIORef globalSessionRef
 
 -- | Fixed increment by which the window increases in an infinite session
 windowStep :: Time
-windowStep = 1
+windowStep = 0.5
 
 incrementWindowBy :: Session -> Time -> Session
 incrementWindowBy (Session as (s, e) m) amt = 
@@ -117,7 +113,7 @@ reset = do
 -- | and update the server
 evalSession :: Session -> IO ()
 evalSession sess@(Session _ w m) = void . forkIO $ do
-  evalAndSendSynths (synthList sess) w
+  _ <- evalAndSendSynths (synthList sess) w
   sendSynthNames sess
   evalAndSendPatches $ patchList sess
   case m of

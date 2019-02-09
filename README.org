@@ -1,23 +1,42 @@
-* TimeLines [WIP]
-The music live-coding language that grows with you, on stage or in the studio.
+* TimeLines
+The world's most powerful, customizable, live codable modular synth and sequencer (probably).
 *** For Musicians
-TimeLines is an extremely powerful, versatile, and customizable sequencer in the form of a live coding language. This means that, instead of pressing buttons and turning dials, one types code that describes how the various musical parameters should be moving over time. Typically, one would keep changing and adding to the code as a means of developing musical ideas, applying every change for instant feedback in the sound produced (hence the term "live coding"). You can think of it as the automation feature of modern DAWs on steroids, only instead of painstakingly clicking and dragging to get that shape just right you use simple maths that do the job for you.
+TimeLines is an extremely powerful, versatile, and customizable modular synth and sequencer in the form of a live coding language. This means that, instead of pressing buttons and turning dials, one writes and modifies code that describes how each synth's parameters should be moving over time. Typically, one would keep changing and adding to the code as a means of developing musical ideas, evaluating every change for instant feedback in the sound produced (hence the term "live coding"). You can think of it as the automation feature of modern DAWs on steroids, only instead of painstakingly clicking and dragging to get that shape just right you use simple maths that do the job for you.
 
-TimeLines is based on the idea that music is a function of time. This simply means that, ultimately, music is what emerges as time flows forwards, bringing about changes in sound that we perceive as melodies, rhythms, chord progressions etc. In other words, if a painting is experienced by looking along the space of a canvas, then a piece of music is experienced by listening through time, from its beginning till end. TimeLines builds on that concept by forming all musical structure as functions of explicit time. "Explicit" simply means that time is not dealt with behind the scenes, as is the case for most synthesizers and music software, but is rather brought to the surface and subjected to any and all kinds of transformations: we can stretch it, compress it, loop it, speed it up and slow it down, and give it all sorts of funny shapes. 
+TimeLines is based on the idea that music is a function of time. This simply means that, ultimately, music is what emerges as time flows forwards, bringing about all changes in sound that we perceive as melodies, rhythms, chord progressions etc. In other words, if a painting is experienced by looking along the space of a canvas, then a piece of music is experienced by listening to it through time, from its beginning till the end. TimeLines builds on that concept by forming all musical structure as functions of explicit time. "Explicit" simply means that time is not dealt with behind the scenes, as is the case for most synthesizers and music software, but is rather brought to the surface and subjected to any and all kinds of transformations: we can stretch it, compress it, loop it, speed it up and slow it down, and give it all sorts of funny shapes.
 
-Every parameter of a musical process (synth, effect, sequence etc.) is controlled through an equation that asks a simple question: "If the time right now is 't' seconds (counting from the beginning of the piece), what value should this parameter have?". This question is then answered for every consecutive moment in time, essentially mapping out the "automation line" of that parameter. This allows one to become arbitrarily specific when making music, gaining full control over each and every aspect of their sound and composition.
+Every parameter of a musical process (synth, effect, sequence etc.) is controlled through an equation that asks a simple question: "If the time right now is 't' seconds (counting from the beginning of the piece), what value should this parameter have right now?". This question is then answered for every consecutive moment in time, essentially mapping out the "automation line" of that parameter. This allows one to become arbitrarily specific when making music, gaining full control over each and every aspect of their sound and composition.
 
-The best part? The level of maths required is taught in schools, with 90% of the equations being additions, subtractions, multiplications, and divisions. All you have to do is learn how each of these changes the sound and behavior of your instruments. 
+The best part? The level of maths required is taught in schools, with the overwhelming majority of the equations using just additions, subtractions, multiplications, and divisions. All you have to do is learn how each of these changes the sound and behavior of your instruments. 
 *** For Programmers
 TimeLines is a real-time environment for live coding music as functions of explicit time. It is embedded in Haskell, a purely functional programming language, and currently lives within the Emacs programmable editor. It acts as a front-end to the SuperCollider synthesis server, modulating all parameters of a synth (such as its amplitude, frequency, filter cutoff etc.) over time by sampling mathematical equations hundreds or thousands of times per second.
 
-At the moment, TimeLines is used as the "brains" of the SuperCollider synthesis engine, a completely modular environment for building and connecting sound synthesis and editing processes. TimeLines "plugs" on top of those processes and hijacks their behavior, taking full control of their parameters over time. Everything is purely functional: no state is changed, no envelopes are triggered, no sequencers are manipulated, just waves that dictate the motion of each parameter.
+At the moment, TimeLines is used as the "brains" of the SuperCollider synthesis engine, a completely modular environment for building and connecting sound synthesis and editing processes. TimeLines "plugs" on top of those processes and hijacks their behavior, taking full control of their parameters over time. Synths can be created, freed, and patched into one another in all sorts of different ways, making TimeLines a fully modular synth and sequencer. Everything is purely functional: no state is changed, no envelopes are triggered, no sequencers are manipulated, just waves that dictate the motion of each parameter.
 
-One day, you may even be able to use it for MIDI and CV outputs, allowing for full control over your hardware and modular synths over time.
+One day, you will even be able to use it for MIDI and CV outputs, allowing for full control over your hardware and modular synths.
+** Main Concepts
+*** Signal
+Signals are the building blocks of music in TimeLines, defined as functions that take time and return a value. These signals are not what comes out of the speakers, but they are used to control all the parameters of the instruments. Digital or analog, discreete or continuous, signals make the world go round.
+
+There are, give or take, five main types of signals:
+1. *Constant:* The simplest type of signal, which completely ignores the time and always returns the same value. Signals like ~2~, ~pi~, and ~5/4~ are all constant.
+2. *Identity*: The most important type of signal, time itself. Abbreviated as ~t~, this signal will always return the value passed to it, practically acting as a clock.
+3. *Periodic*: Signals that repeat their behaviour after a certain amount of time. This includes anything from simple trigonometric functions such as ~sine~ and ~cosine~, phasors (i.e. ramps that go from 0 to 1 and repeat), or more complicated signals such as whole melodic phrases or rhythms that repeat after some time.
+4. *Pseudo-random*: Any signal whose output seems random to the human ear. As opposed to random number generators, these signals won't just yield a pseudo-random number every time they're called, but rather have to be explicitly indexed into to get the next (or previous) values. This may sound like an unnecessarily tedious way of doing things, but it has some major advantages. For example, previously indexed values can be re-used at any time, simply by passing the same argument to the function. More on this in the examples.
+5. *Arbitrary*: Lastly, the majority of signals will not fall in any of the above categories, but will be arbitrary combinations of one or more of them. Such signals may be constant for a while, then loop for some time before introducing some randomness, and finally falling constant for the rest of time. Arbitrary signals can be put together by taking a few signals of varying behaviours, cropping them so that they only have a non-zero value inside their allocated time slot, and finally summing them all together. The end result creates the illusion of a single signal, whose behaviour seamlessly (or abruptly) changes from one signal to another over time.
+*** Timeline
+A timeline is a collection of signals. They each may be of different types, have different contents and durations, and only affect the final output at certain times and not others. Ultimately, a timeline describes the life course of each parameter of every instrument in a piece of music.
+*** Window
+A Window is a frame of time. All signals are defined over continuous, infinite time. A global Window determines the time interval over which all signals are actually being evaluated and observed. Without a Window, nothing actually gets calculated, everything is hypothetical (and completely deterministic, so you can be sure that evaluating the same code over the same Window will always yield the same results).
+
+If you are familiar with DAWs, you can think of a Window as the selected section of the piece you are currently working on, which is usually either looped, to monitor changes to it while they're applied, or played in between changes.
+
+If you are more familiar with programming, you can think of the Window as the viewport in a game: the code to put together a whole level already exists, but at any given moment there is only a certain window that has to be loaded and rendered, the one that the player is actually looking at. Everything else remains in the hypothetical realm, ready to be assembled when the time is right.
+*** Synths
+*** Session
 ** Code Examples
 #+BEGIN_SRC Haskell
--- Set the current time selection to the first 10 seconds
-window 0 10
+
 
 -- An FM synth whose parameters stay constant over time
 synth "staticTone_fm" $ do
@@ -48,16 +67,4 @@ synth "tremoloMelody_fm" $ do
   "modRatio" <>< 5
   "modAmt" <>< 1000 * (slow 2 $ tremoloLFO)
 #+END_SRC
-
-** Main Concepts
-*** Signal
-Signals are the building blocks of music in TimeLines, defined as functions that take Time and return a Value. The parameters of a synth/audio process can be thought of as signals; they all vary over time in some particular way. Some may be periodic (e.g. "sin (2*pi*t)"), others non-repeating (e.g. "noise t"), and some may stay constant for ever (e.g. "2.5"), but every moment has a specific value for every parameter associated with that synth. Signals can be combined (added, multiplied etc.) to produce more complex Signals that make up the whole piece or performance.
-*** Timeline
-A Timeline is a collection of Signals. Some may always be relevant (i.e. affecting that parameter for every moment in time), while others may only actually affect its behavior at certain times (say, only for the first or last 10 seconds). The combination of all those Signals in a Timeline is what determines the overall behavior of that parameter over the whole of time. Theoretically, each Timeline is an equation that will yield a value for every value of time you plug into it.
-*** Window
-A Window is a frame of time. All signals are defined over continuous, infinite time. A global Window determines the time interval over which all signals are actually being evaluated and observed. Without a Window, nothing actually gets calculated, everything is hypothetical (and completely deterministic, so you can be sure that evaluating the same code over the same Window will always yield the same results).
-
-If you are familiar with DAWs, you can think of a Window as the selected section of the piece you are currently working on, which is usually either looped, to monitor changes to it while they're applied, or played in between changes.
-
-If you are more familiar with programming, you can think of the Window as the viewport in a game: the code to put together a whole level already exists, but at any given moment there is only a certain window that has to be loaded and rendered, the one that the player is actually looking at. Everything else remains in the hypothetical realm, ready to be assembled when the time is right.
 
