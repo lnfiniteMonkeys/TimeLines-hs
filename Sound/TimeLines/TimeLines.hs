@@ -85,6 +85,9 @@ incrementAndEvalIfInfinite = do
 isInfiniteSession :: Session -> Bool
 isInfiniteSession (Session _ _ m) = m == InfiniteMode
 
+isFiniteSession :: Session -> Bool
+isFiniteSession = not . isInfiniteSession
+
 readSessionRef :: IO Session
 readSessionRef = readIORef globalSessionRef >>= return
 
