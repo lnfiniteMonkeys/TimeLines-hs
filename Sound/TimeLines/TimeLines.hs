@@ -4,7 +4,7 @@ import qualified Sound.File.Sndfile as SF
 
 import Sound.TimeLines.Types
 import Sound.TimeLines.Util
-import Sound.TimeLines.OSC (sendMessages, sendStringMessage, udpServer, sendResetMsg, sendBundle, makeImmediateBundle, makeStringMessage)
+import Sound.TimeLines.OSC --(sendMessages, sendStringMessage, udpServer, sendResetMsg, sendBundle, makeImmediateBundle, makeStringMessage)
 import Sound.TimeLines.Globals (globalSessionRef)
 
 import Control.Concurrent (forkIO)
@@ -31,28 +31,27 @@ finiteSession w as = do
 infiniteSession :: Collector Action -> IO ()
 infiniteSession as = do
   (Session _ w prevMode) <- readSessionRef
-  let a = do
+  case prevMode of
+    InfiniteMode -> modifyIORef' globalSessionRef $
+                    \_ -> Session (collectList as) w InfiniteMode
+    FiniteMode -> do
         let newWindow = (0, windowStep)
             newSess = Session (collectList as) newWindow InfiniteMode
-        sendLoop 0
+        sendResetTimer 0
         sendFreeSynths
-        sendWindow newWindow
         evalSession newSess
-        sendLoop 1
-        sendResetTimer
+        sendResetTimer 1
         modifyIORef' globalSessionRef $ \_ -> newSess
-      b = modifyIORef' globalSessionRef $
-        \_ -> Session (collectList as) w InfiniteMode
-  if prevMode == FiniteMode then a else b
 
 sendFreeSynths :: IO ()
-sendFreeSynths = sendStringMessage "/TimeLines/freeAllSynths" []
+sendFreeSynths = sendStringMessage "/TimeLines/freeAllSynths" ""
 
 sendLoop :: Int -> IO ()
-sendLoop x = sendStringMessage "/TimeLines/setLoop" $ show x
+sendLoop x = sendIntMessage "/TimeLines/setLoop" x
 
-sendResetTimer :: IO ()
-sendResetTimer = sendStringMessage "/TimeLines/resetTimer" ""
+-- Argument of 1 unmutes the timer if muted
+sendResetTimer :: Int -> IO ()
+sendResetTimer i = sendIntMessage "/TimeLines/resetTimer" i
 
   {-
   -- Reset window if previous session was finite
@@ -126,12 +125,8 @@ incrementWindowBy amt (Session as (s, e) m) =
 
 reset :: IO ()
 reset = do
-  (Session as _ m) <- readIORef globalSessionRef
-  let w = case m of
-        FiniteMode -> (0, 1)
-        InfiniteMode -> (0, windowStep)
-  writeIORef globalSessionRef $ Session [] w m
-  --sendResetMsg
+  modifyIORef' globalSessionRef $ \_ -> defaultSession
+  sendStringMessage "/TimeLines/resetServer" ""
   
 ------------
 {- Eval functions -}
@@ -142,6 +137,8 @@ evalSession :: Session -> IO ()
 evalSession sess@(Session as w m) = do
   let synthNames = synthIDList sess
       patches = patchList sess
+  sendStringMessage "/TimeLines/sessionMode" $ show m
+  sendStringMessage "/TimeLines/setWindowDur" $ show $ windowDur w
   -- write all buffers and get list of lists of paths
   listsOfPaths <- mapConcurrently (evalSynthWithID w) $ synthList sess
   -- send all synths to be loaded
@@ -152,6 +149,7 @@ evalSession sess@(Session as w m) = do
   -- send list of active synths so that inactive ones can be freed
   sendMessages "/TimeLines/currentSynths" synthNames
   sendMessages "/TimeLines/patches" $ flattenPatches patches
+  sendIntMessage "/TimeLines/setTimerActive" 1
 
 showWindowStep :: String
 showWindowStep = Numeric.showFFloat Nothing windowStep ""
@@ -215,6 +213,6 @@ printMode :: IO ()
 printMode = do
   (Session _ _ m) <- readIORef globalSessionRef
   putStrLn $ (++) "Current mode: " $ show m
-  
+
 pathToTemp :: FilePath
 pathToTemp = unsafePerformIO getTLTempDir

@@ -16,6 +16,9 @@ type Time = Double
 -- | A section of time between start and end points
 type Window = (Time, Time)
 
+windowDur :: Window -> Time
+windowDur (s, e) = e - s
+
 -- | The rate at which a Signal is to be sampled
 type SamplingRate = Int
 
@@ -85,7 +88,7 @@ data FiniteTimeLine = FTL {ftlParamSig::ParamSignal,
 defaultSamplingRate = 700 
 
 defaultSession :: Session
-defaultSession = Session [] (0, 0.5) InfiniteMode
+defaultSession = Session [] (0, 1) FiniteMode
 
 defaultSignal :: Signal Value
 defaultSignal = Signal (\t -> 0)
