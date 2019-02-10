@@ -31,9 +31,14 @@ sendBundle b = FD.sendOSC globalUDPRef b
 -- | and sends them to SCLang
 sendStringMessage :: String -> String -> IO ()
 sendStringMessage path str = do
-  let m = OSC.Message path [OSC.string str]
-  FD.sendOSC globalUDPRef m
+  FD.sendOSC globalUDPRef $ OSC.Message path [OSC.string str]
+  putStrLn $ "sent string message: " ++ path ++ " " ++ str
 
+sendIntMessage :: String -> Int -> IO ()
+sendIntMessage path i = do
+  FD.sendOSC globalUDPRef $ OSC.Message path [OSC.int32 i]
+  putStrLn $ "sent Int message: " ++ path ++  " " ++ (show i)
+  
 sendTestMessage :: IO ()
 sendTestMessage = sendStringMessage "TimeLines" "test"
 
@@ -42,15 +47,6 @@ sendMessages path strs = do
   let m = OSC.Message path $ map OSC.string strs
   FD.sendOSC globalUDPRef m
   
--- | Sends a "reset" message to SCLang
-sendResetMsg :: IO()
-sendResetMsg = do
-  sendStringMessage "/TimeLines/reset" ""
-  (Session _ (s, e) _) <- readIORef globalSessionRef
-  let dur = e - s
-  sendStringMessage "/TimeLines/setWindowDur" (show dur)
-  putStrLn "Server reset"
-
 -- | The port at which SCLang is expecting communication
 -- | (default = 57120)
 scLangPort = 57120
