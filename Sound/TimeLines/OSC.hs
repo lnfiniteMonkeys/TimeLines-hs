@@ -18,15 +18,24 @@ import Sound.TimeLines.Types
 import Sound.TimeLines.Util
 import Sound.TimeLines.Globals
 
+makeStringMessage :: String -> [String] -> OSC.Message
+makeStringMessage path ss = OSC.Message path $ map OSC.string ss
+
+makeImmediateBundle :: [OSC.Message] -> OSC.Bundle
+makeImmediateBundle ms = OSC.Bundle OSC.immediately ms
+  
+sendBundle :: OSC.Bundle -> IO ()
+sendBundle b = FD.sendOSC globalUDPRef b
+
 -- | Takes a path and an argument (both strings)
 -- | and sends them to SCLang
-sendMessage :: String -> String -> IO ()
-sendMessage path str = do
+sendStringMessage :: String -> String -> IO ()
+sendStringMessage path str = do
   let m = OSC.Message path [OSC.string str]
   FD.sendOSC globalUDPRef m
 
 sendTestMessage :: IO ()
-sendTestMessage = sendMessage "TimeLines" "test"
+sendTestMessage = sendStringMessage "TimeLines" "test"
 
 sendMessages :: String -> [String] -> IO ()
 sendMessages path strs = do
@@ -36,10 +45,10 @@ sendMessages path strs = do
 -- | Sends a "reset" message to SCLang
 sendResetMsg :: IO()
 sendResetMsg = do
-  sendMessage "/TimeLines/reset" ""
+  sendStringMessage "/TimeLines/reset" ""
   (Session _ (s, e) _) <- readIORef globalSessionRef
   let dur = e - s
-  sendMessage "/TimeLines/setWindow" (show dur)
+  sendStringMessage "/TimeLines/setWindowDur" (show dur)
   putStrLn "Server reset"
 
 -- | The port at which SCLang is expecting communication

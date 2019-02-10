@@ -4,7 +4,7 @@ import qualified Sound.File.Sndfile as SF
 
 import Sound.TimeLines.Types
 import Sound.TimeLines.Util
-import Sound.TimeLines.OSC (sendMessages, sendMessage, udpServer, sendResetMsg)
+import Sound.TimeLines.OSC (sendMessages, sendStringMessage, udpServer, sendResetMsg, sendBundle, makeImmediateBundle, makeStringMessage)
 import Sound.TimeLines.Globals (globalSessionRef)
 
 import Control.Concurrent (forkIO)
@@ -22,8 +22,8 @@ import Numeric (showFFloat)
 -- | (that window can be either looped or one-shot trigerred)
 finiteSession :: Window -> Collector Action -> IO ()
 finiteSession w as = do
-  let newSess = Session (executeCollector as) w FiniteMode
-  writeIORef globalSessionRef newSess
+  let newSess = Session (collectList as) w FiniteMode
+  modifyIORef' globalSessionRef (\_ -> newSess)
   evalSession newSess
 
 -- | A session in which time constantly and infinitely
@@ -31,16 +31,42 @@ finiteSession w as = do
 infiniteSession :: Collector Action -> IO ()
 infiniteSession as = do
   (Session _ w prevMode) <- readSessionRef
+  let a = do
+        let newWindow = (0, windowStep)
+            newSess = Session (collectList as) newWindow InfiniteMode
+        sendLoop 0
+        sendFreeSynths
+        sendWindow newWindow
+        evalSession newSess
+        sendLoop 1
+        sendResetTimer
+        modifyIORef' globalSessionRef $ \_ -> newSess
+      b = modifyIORef' globalSessionRef $
+        \_ -> Session (collectList as) w InfiniteMode
+  if prevMode == FiniteMode then a else b
+
+sendFreeSynths :: IO ()
+sendFreeSynths = sendStringMessage "/TimeLines/freeAllSynths" []
+
+sendLoop :: Int -> IO ()
+sendLoop x = sendStringMessage "/TimeLines/setLoop" $ show x
+
+sendResetTimer :: IO ()
+sendResetTimer = sendStringMessage "/TimeLines/resetTimer" ""
+
+  {-
   -- Reset window if previous session was finite
-  let newSess = Session (executeCollector as) newWindow InfiniteMode
+  let newSess = Session (collectList as) newWindow InfiniteMode
       newWindow = case prevMode of
         FiniteMode -> (0, windowStep)
         InfiniteMode -> w
-  writeSessionRef newSess
+  modifyIORef' globalSessionRef (\_ -> newSess)
+-}
+
 
 -- | Interface function that groups params into Synths
 synth :: SynthID -> Collector ParamSignal -> Collector Action
-synth id params = registerSynthAction (id, executeCollector params)
+synth id params = registerSynthAction (id, collectList params)
 
 -- | Ignores a synth
 mute :: Collector Action -> Collector Action
@@ -74,7 +100,7 @@ incrementAndEvalIfInfinite :: IO ()
 incrementAndEvalIfInfinite = do
   sess <- readSessionRef
   when (isInfiniteSession sess) $ do
-    let newSess = incrementWindowBy sess windowStep
+    let newSess = incrementWindowBy windowStep sess
     writeSessionRef newSess
     evalSession newSess
 
@@ -85,17 +111,17 @@ isFiniteSession :: Session -> Bool
 isFiniteSession = not . isInfiniteSession
 
 readSessionRef :: IO Session
-readSessionRef = readIORef globalSessionRef >>= return
+readSessionRef = readIORef globalSessionRef
 
 writeSessionRef :: Session -> IO ()
-writeSessionRef = writeIORef globalSessionRef
+writeSessionRef s = modifyIORef' globalSessionRef $ \_ -> s
 
 -- | Fixed increment by which the window increases in an infinite session
 windowStep :: Time
 windowStep = 0.5
 
-incrementWindowBy :: Session -> Time -> Session
-incrementWindowBy (Session as (s, e) m) amt = 
+incrementWindowBy :: Time -> Session -> Session
+incrementWindowBy amt (Session as (s, e) m) = 
   Session as (s+amt, e+amt) m
 
 reset :: IO ()
@@ -109,53 +135,44 @@ reset = do
   
 ------------
 {- Eval functions -}
+
 -- | Evaluate all actions in the current Session
 -- | and update the server
 evalSession :: Session -> IO ()
-evalSession sess@(Session _ w m) = void . forkIO $ do
-  _ <- evalAndSendSynths (synthList sess) w
-  sendSynthNames sess
-  evalAndSendPatches $ patchList sess
-  case m of
-    FiniteMode -> sendWindow w
-    InfiniteMode -> sendMessage "/TimeLines/setWindow"
-      $ Numeric.showFFloat Nothing windowStep ""
+evalSession sess@(Session as w m) = do
+  let synthNames = synthIDList sess
+      patches = patchList sess
+  -- write all buffers and get list of lists of paths
+  listsOfPaths <- mapConcurrently (evalSynthWithID w) $ synthList sess
+  -- send all synths to be loaded
+  sendBundle $ makeImmediateBundle $
+    map (makeStringMessage "/TimeLines/loadSynthBuffers") listsOfPaths
+  -- send patch order
+  sendMessages "/TimeLines/synthOrder" $ sortPatches patches
+  -- send list of active synths so that inactive ones can be freed
+  sendMessages "/TimeLines/currentSynths" synthNames
+  sendMessages "/TimeLines/patches" $ flattenPatches patches
+
+showWindowStep :: String
+showWindowStep = Numeric.showFFloat Nothing windowStep ""
 
 evalCurrSession :: IO ()
 evalCurrSession = readIORef globalSessionRef >>= evalSession
 
-evalAndSendPatches :: [Patch] -> IO ()
-evalAndSendPatches p = do
-  sendMessages "/TimeLines/synthOrder" $ sortPatches p
-  sendMessages "/TimeLines/patches" $ flattenPatches p
-
-flattenPatches :: [Patch] -> [SynthID]
-flattenPatches [] = []
-flattenPatches ((s1, s2):ps) = [s1, s2] ++ flattenPatches ps
-
-evalAndSendSynths :: [SynthWithID] -> Window -> IO ()
-evalAndSendSynths synths w = mapM_ (forkIO . flip evalSynthWithID w) synths
-
-sendSynthNames :: Session -> IO ()
-sendSynthNames s = sendMessages "/TimeLines/synthNames" $ synthIDList s
-
 sendWindow :: Window -> IO ()
-sendWindow (s, e) = sendMessage "/TimeLines/setWindow" $ show $ e - s
+sendWindow (s, e) = sendStringMessage "/TimeLines/setWindowDur" $ show $ e - s
 
--- | Evaluate a synth, writing all its parameters to files
--- | and, once they're all written, sending the message to
--- | update on the server
--- evalSynthWithID :: SynthWithID -> Window -> SynthGroup -> IO ()
-evalSynthWithID :: SynthWithID -> Window -> IO ()
-evalSynthWithID (synthID, synth) w = do
-  filePaths <- mapConcurrently (writeSingleParam synthID w) synth
-  sendLoadMsgs filePaths
+-- | Write a synth's signal buffers, return all filepaths
+evalSynthWithID :: Window -> SynthWithID -> IO [FilePath]
+evalSynthWithID w (synthID, synth) = do
+  mapConcurrently (writeParam synthID w) synth
+
 
 -- TODO: clean up
 -- | Takes a param and a signal, evaluates it over the current window
 -- | writes it to a file, and returns its filepath
-writeSingleParam :: SynthID -> Window -> ParamSignal -> IO String
-writeSingleParam synthID w pSig@(p, (sig, sr)) = do
+writeParam :: SynthID -> Window -> ParamSignal -> IO FilePath
+writeParam synthID w pSig@(p, (sig, sr)) = do
   let filePath = pathToTemp ++ synthID ++ "_" ++ p ++ ".w64"
       ftl = FTL pSig w
   _ <- removeFileIfExists filePath
@@ -164,30 +181,14 @@ writeSingleParam synthID w pSig@(p, (sig, sr)) = do
   framesWritten <- SF.hPutBuf h arrayPtr $ ftlNumSteps ftl
   closeHandle h
   return filePath
-
-
--- | Update the session's window, re-evaluate all synths
--- | and update the server's timer
-window :: Window -> IO ()
-window w@(s, e) = do
-  modifyIORef' globalSessionRef $ replaceSessionWindow w
-  sendMessage "/TimeLines/setWindow" durStr
-  evalCurrSession
-    where durStr = show $ e - s
-
--- | Same as above but without sending a message to the server
-window' :: Window -> IO ()
-window' w = do
-  modifyIORef' globalSessionRef $ replaceSessionWindow w
-  evalCurrSession
   
 replaceActions :: [Action] -> Session -> Session
 replaceActions newActions (Session _ w m) = Session newActions w m
 
-sendLoadMsgs :: [String] -> IO ()
-sendLoadMsgs filepaths = sendMessages "/TimeLines/load" filepaths
+sendLoadSynthBuffers :: [Param] -> IO ()
+sendLoadSynthBuffers filepaths = sendMessages "/TimeLines/load" filepaths
 
-
+--sendLoadAllSynths :: [(SynthID, )]
 {- PRINT FUNCTIONS -}
 
 printNumSynths :: IO ()
@@ -217,4 +218,3 @@ printMode = do
   
 pathToTemp :: FilePath
 pathToTemp = unsafePerformIO getTLTempDir
-
