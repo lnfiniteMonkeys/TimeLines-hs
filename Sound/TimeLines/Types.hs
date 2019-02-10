@@ -3,6 +3,7 @@ module Sound.TimeLines.Types where
 import Control.Applicative
 import Control.Monad
 import Control.Monad.Writer
+
 --import qualified Data.Map.Strict as Map
 
 -- | The type actually written to files
@@ -84,7 +85,7 @@ data FiniteTimeLine = FTL {ftlParamSig::ParamSignal,
 defaultSamplingRate = 700 
 
 defaultSession :: Session
-defaultSession = Session [] (0, 1) InfiniteMode
+defaultSession = Session [] (0, 0.5) InfiniteMode
 
 defaultSignal :: Signal Value
 defaultSignal = Signal (\t -> 0)
@@ -135,8 +136,8 @@ constSig v = Signal $ \t -> v
 
 
 -- Collector Functions --
-executeCollector :: Collector a -> [a]
-executeCollector = execWriter
+collectList :: Collector a -> [a]
+collectList = execWriter
 
 register :: a -> Collector a
 register a = tell [a]

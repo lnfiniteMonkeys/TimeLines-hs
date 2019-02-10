@@ -27,10 +27,11 @@ import Sound.TimeLines.Types
 replaceSessionWindow :: Window -> Session -> Session
 replaceSessionWindow newWindow (Session as _ m) = Session as newWindow m
 
-
 {- SYNTH PATCHES -}
+
 data PatchGraph = PatchGraph {graphVertices::[String],
-                              graphEdges::[(String, String)]}
+                              graphEdges::[(String, String)]
+                             }
 
 testPatchOrder :: [SynthID] -> [Patch] -> Bool
 testPatchOrder order = all (\(s1, s2) ->
@@ -62,6 +63,10 @@ graphFromPatches ps = array (0, n - 1) $ patchEdges ps
 sortPatches :: [Patch] -> [SynthID]
 sortPatches [] = []
 sortPatches ps = [(nameSetList ps)!!i | i <- Graph.topSort $ graphFromPatches ps]
+
+flattenPatches :: [Patch] -> [SynthID]
+flattenPatches [] = []
+flattenPatches ((s1, s2):ps) = [s1, s2] ++ flattenPatches ps
 
 {- /SYNTH PATCHES -}
 
