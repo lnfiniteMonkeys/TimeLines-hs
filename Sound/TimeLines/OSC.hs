@@ -42,15 +42,16 @@ sendIntMessage path i = do
 sendTestMessage :: IO ()
 sendTestMessage = sendStringMessage "TimeLines" "test"
 
-sendMessages :: String -> [String] -> IO ()
-sendMessages path strs = do
+sendStringMessages :: String -> [String] -> IO ()
+sendStringMessages path strs = do
   let m = OSC.Message path $ map OSC.string strs
   FD.sendOSC globalUDPRef m
+  putStrLn $ "sent string messages: " ++ path ++  " " ++ (show strs)
   
 -- | The port at which SCLang is expecting communication
--- | (default = 57120)
-scLangPort = 57120
-localPort  = 57121
+-- | (default = 57121)
+scLangPort = 57121
+localPort  = 55800
 
 -- | Global reference of the UDP port used to
 -- | communicate with SCLang
@@ -58,14 +59,16 @@ localPort  = 57121
 globalUDPRef :: OSC.UDP
 globalUDPRef = unsafePerformIO $ OSC.openUDP "127.0.0.1" scLangPort
 
-udpServer :: IO () ->  IO ()
-udpServer response = void $ forkIO $ FD.withTransport s f
+udpServer :: (IO (), IO ()) ->  IO ()
+udpServer (aIncr, aEval) = void $ forkIO $ FD.withTransport s f
   where s = FD.udpServer "127.0.0.1" localPort
-        f t = forever $ FD.recvMessage t >>= checkMessages response
+        f t = forever $ FD.recvMessage t >>= checkMessages (aIncr, aEval)
 
-checkMessages :: IO () -> Maybe FD.Message -> IO ()
+checkMessages :: (IO (), IO ()) -> Maybe FD.Message -> IO ()
 checkMessages _ (Nothing) = return ()
-checkMessages action (Just m) = if (FD.messageAddress m == "/incrementWindow") then action else return ()
+checkMessages (aIncr, aEval) (Just m) = case FD.messageAddress m of
+  "/incrementWindow" -> aIncr
+  "/evalSession" -> aEval
 
 
 
