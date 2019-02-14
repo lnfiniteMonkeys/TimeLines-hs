@@ -10,13 +10,16 @@ import Data.IORef (IORef, newIORef, readIORef, writeIORef)
 import System.IO.Unsafe (unsafePerformIO)
 
 import Control.Concurrent
-import Control.Monad (void, forever)
+import Control.Monad (void, forever, when)
 import Data.Maybe
 import Data.IORef
 
 import Sound.TimeLines.Types
 import Sound.TimeLines.Util
 import Sound.TimeLines.Globals
+
+-- set to true for OSC tracing
+debugMode = False
 
 makeStringMessage :: String -> [String] -> OSC.Message
 makeStringMessage path ss = OSC.Message path $ map OSC.string ss
@@ -32,12 +35,12 @@ sendBundle b = FD.sendOSC globalUDPRef b
 sendStringMessage :: String -> String -> IO ()
 sendStringMessage path str = do
   FD.sendOSC globalUDPRef $ OSC.Message path [OSC.string str]
-  putStrLn $ "sent string message: " ++ path ++ " " ++ str
+  when debugMode $ putStrLn $ "sent string message: " ++ path ++ " " ++ str
 
 sendIntMessage :: String -> Int -> IO ()
 sendIntMessage path i = do
   FD.sendOSC globalUDPRef $ OSC.Message path [OSC.int32 i]
-  putStrLn $ "sent Int message: " ++ path ++  " " ++ (show i)
+  when debugMode $ putStrLn $ "sent Int message: " ++ path ++  " " ++ (show i)
   
 sendTestMessage :: IO ()
 sendTestMessage = sendStringMessage "TimeLines" "test"
@@ -46,7 +49,7 @@ sendStringMessages :: String -> [String] -> IO ()
 sendStringMessages path strs = do
   let m = OSC.Message path $ map OSC.string strs
   FD.sendOSC globalUDPRef m
-  putStrLn $ "sent string messages: " ++ path ++  " " ++ (show strs)
+  when debugMode $ putStrLn $ "sent string messages: " ++ path ++  " " ++ (show strs)
   
 -- | The port at which SCLang is expecting communication
 -- | (default = 57121)
