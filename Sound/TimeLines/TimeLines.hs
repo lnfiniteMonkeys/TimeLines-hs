@@ -18,11 +18,14 @@ import Numeric (showFFloat)
 
 {- INTERFACE FUNCTIONS -}
 
+
+emptyForkIO = void . forkIO
+
 -- | A session in which the window is explicit and static
 -- | (that window can be either looped or one-shot trigerred)
 finiteSession :: Window -> Collector Action -> IO ()
-finiteSession w as = do
-  let newSess = Session (collectList as) w FiniteMode
+finiteSession w actions = emptyForkIO $ do
+  let newSess = Session (collectList actions) w FiniteMode
   evalSession newSess
   writeSessionRef newSess
 
@@ -101,8 +104,9 @@ incrementWindowBy amt (Session as (s, e) m) =
 
 reset :: IO ()
 reset = do
+  sendStringMessage "/TimeLines/resetSession" ""
   writeSessionRef defaultSession
-  sendStringMessage "/TimeLines/resetServer" ""
+
   
 ------------
 {- Eval functions -}

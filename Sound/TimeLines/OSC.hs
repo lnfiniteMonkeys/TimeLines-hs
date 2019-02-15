@@ -52,8 +52,8 @@ sendStringMessages path strs = do
   when debugMode $ putStrLn $ "sent string messages: " ++ path ++  " " ++ (show strs)
   
 -- | The port at which SCLang is expecting communication
--- | (default = 57121)
-scLangPort = 57121
+-- | (default = 57120)
+scLangPort = 57120
 localPort  = 55800
 
 -- | Global reference of the UDP port used to

@@ -3,6 +3,8 @@ module Sound.TimeLines.Types where
 import Control.Applicative
 import Control.Monad
 import Control.Monad.Writer
+import Data.List
+import qualified Data.Set as Set
 
 --import qualified Data.Map.Strict as Map
 
@@ -116,8 +118,18 @@ toPatch _ = undefined
 synthList :: Session -> [SynthWithID]
 synthList = map toSynth . filter isSynth . actions
 
-patchList :: Session -> [Patch]
-patchList = map toPatch . filter isPatch . actions
+patchList' :: Session -> [Patch]
+patchList' = map toPatch . filter isPatch . actions
+
+patchList sess = patchList' sess ++ [(s, "mainOut") | s <- unPatchedSynths sess]
+
+unPatchedSynths :: Session -> [SynthID]
+unPatchedSynths sess = synthIDList sess \\ patchedSynths sess
+
+patchedSynths sess = removeDups [src | (src, dst) <- patchList sess]
+
+removeDups :: Ord a => [a] -> [a]
+removeDups = Set.toList . Set.fromList
 
 synthIDList :: Session -> [SynthID]
 synthIDList = map fst . synthList
