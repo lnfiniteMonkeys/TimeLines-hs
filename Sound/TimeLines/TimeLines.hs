@@ -19,12 +19,13 @@ import Numeric (showFFloat)
 {- INTERFACE FUNCTIONS -}
 
 
+-- fork session wrappers?
 emptyForkIO = void . forkIO
 
 -- | A session in which the window is explicit and static
 -- | (that window can be either looped or one-shot trigerred)
 finiteSession :: Window -> Collector Action -> IO ()
-finiteSession w actions = emptyForkIO $ do
+finiteSession w actions = do
   let newSess = Session (collectList actions) w FiniteMode
   evalSession newSess
   writeSessionRef newSess

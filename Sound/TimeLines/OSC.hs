@@ -54,7 +54,7 @@ sendStringMessages path strs = do
 -- | The port at which SCLang is expecting communication
 -- | (default = 57120)
 scLangPort = 57120
-localPort  = 55800
+localPort  = 70000
 
 -- | Global reference of the UDP port used to
 -- | communicate with SCLang
@@ -72,6 +72,7 @@ checkMessages _ (Nothing) = return ()
 checkMessages (aIncr, aEval) (Just m) = case FD.messageAddress m of
   "/incrementWindow" -> aIncr
   "/evalSession" -> aEval
+  _ -> print "Not matching"
 
 
 
