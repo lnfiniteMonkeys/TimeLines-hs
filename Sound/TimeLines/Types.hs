@@ -118,15 +118,15 @@ toPatch _ = undefined
 synthList :: Session -> [SynthWithID]
 synthList = map toSynth . filter isSynth . actions
 
-patchList' :: Session -> [Patch]
-patchList' = map toPatch . filter isPatch . actions
+patchList :: Session -> [Patch]
+patchList = map toPatch . filter isPatch . actions
 
-patchList sess = patchList' sess ++ [(s, "mainOut") | s <- unPatchedSynths sess]
+--patchList' sess = (patchList sess) ++ [(s, "mainOut") | s <- unPatchedSynths sess]
 
-unPatchedSynths :: Session -> [SynthID]
-unPatchedSynths sess = synthIDList sess \\ patchedSynths sess
+--unPatchedSynths :: Session -> [SynthID]
+--unPatchedSynths sess = synthIDList sess \\ patchedSynths sess
 
-patchedSynths sess = removeDups [src | (src, dst) <- patchList sess]
+--patchedSynths sess = removeDups [src | (src, dst) <- patchList' sess]
 
 removeDups :: Ord a => [a] -> [a]
 removeDups = Set.toList . Set.fromList
