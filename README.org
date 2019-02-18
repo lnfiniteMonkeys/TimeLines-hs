@@ -1,6 +1,6 @@
 * TimeLines
 (probably) The world's most powerful, customizable, and live codable modular synth and sequencer.
-Watch it in action celebrating 15 years of TOPLAP.org [here](http://www.youtube.com/watch?v=dsHnWE6_JbE)!
+Watch it in action celebrating 15 years of TOPLAP.org here: http://www.youtube.com/watch?v=dsHnWE6_JbE
 *** For Musicians
 TimeLines is an extremely powerful, versatile, and customizable modular synth and sequencer in the form of a live coding language. This means that, instead of pressing buttons and turning dials, one writes and modifies code that describes how each synth's parameters should be moving over time. Typically, one would keep changing and adding to the code as a means of developing musical ideas, evaluating every change for instant feedback in the sound produced (hence the term "live coding"). You can think of it as the automation feature of modern DAWs on steroids, only instead of painstakingly clicking and dragging to get that shape just right you use simple maths that do the job for you.
 
