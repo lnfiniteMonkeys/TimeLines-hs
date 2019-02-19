@@ -142,8 +142,8 @@ ftlSR (FTL (_, (_, sr)) _) = sr
 -- Signal Functions --
 
 -- | The identity Signal, always returns the current time
-t :: Signal Value
-t = Signal $ \t -> t
+--t :: Signal Value
+--t = Signal $ \t -> t
 
 -- | Raises any argument to a constant signal of itself
 constSig :: a -> Signal a
