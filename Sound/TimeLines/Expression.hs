@@ -115,7 +115,7 @@ instance Functor SigExpr where
   fmap f (BinExpr op e1 e2) = BinExpr op (fmap f e1) (fmap f e2)
 
 
-instance (Eq a, Num a) => Eq (SigExpr a) where
+instance (Eq a, Num a, Floating a) => Eq (SigExpr a) where
   ConstExpr a == ConstExpr b = a == b
   UnExpr op1 a == UnExpr op2 b =
     op1 == op2 && a == b
