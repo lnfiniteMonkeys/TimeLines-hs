@@ -4,14 +4,14 @@ import Data.Fixed
 import Sound.TimeLines.Types
 
 data UnOp = Identity | Negate | Inverse | Exp | Log | Sin | Abs 
-          | Signum | Sqrt | Cos | Asin | Atan | Acos 
-          | Sinh | Cosh | Asinh | Atanh | Acosh 
+          | Signum | Sqrt | Cos | Asin | Atan | Acos | Floor
+          | Sinh | Cosh | Asinh | Atanh | Acosh | Truncate
   deriving (Eq, Show)
 
-data BinOp = Add | Mult | Pow | Mod
+data BinOp = Add | Mult | Pow | Mod | ApplyToTime
   deriving (Eq, Show)
 
-toUnFunc :: (Num a, Floating a, Fractional a) => UnOp -> (a -> a)
+toUnFunc :: UnOp -> (Value -> Value)
 toUnFunc op = case op of
   Identity -> id
   Negate -> negate
@@ -31,91 +31,128 @@ toUnFunc op = case op of
   Asinh -> asinh
   Atanh -> atanh
   Acosh -> acosh
-
-toBinFunc :: (Num a, Floating a, Real a) => BinOp -> (a -> a -> a)
+  Floor -> fromIntegral . floor
+  Truncate -> fromIntegral . truncate
+--  Fract -> 
+--truncateExpr :: SigExpr -> SigExpr
+--truncateExpr exp = 
+  
+toBinFunc :: BinOp -> (Value -> Value -> Value)
 toBinFunc op = case op of
   Add -> (+)
   Mult -> (*)
   Pow -> (**)
   Mod -> mod'
 
-toFunc :: (Num a, Fractional a, Floating a) => SigExpr a -> (a -> a)
+
+toFunc :: SigExpr -> (Time -> Value)
 toFunc expr = case expr of
   IdExpr -> \x -> x
   ConstExpr a -> \_ -> a
-  ArgExpr e -> toFunc e
   UnExpr op a -> \x -> (toUnFunc op) $ (toFunc a) x
-  -- BinExprs can't be translated to (a -> a)s
+  BinExpr op a b -> \x -> (toBinFunc op) (toFunc a x) (toFunc b x)
+  ApplyArgExpr a b -> \x -> toFunc b $ (toFunc a) x
 
-toSignal :: SigExpr Time -> Signal Time
+
+toSignal :: SigExpr -> Signal Value
 toSignal = Signal . toFunc
 
-t = ArgExpr IdExpr
+a = BinExpr Add (UnExpr Negate $ ConstExpr 3) (BinExpr Mult (UnExpr Exp (IdExpr)) (ConstExpr 5))
+
+
+slow :: SigExpr -> SigExpr -> SigExpr
+slow amt e = ApplyArgExpr (BinExpr Mult (1/amt) IdExpr) e
+
+slow2 :: SigExpr -> SigExpr -> SigExpr
+slow2 amt IdExpr = amt * time
+
+
+--t = ArgExpr IdExpr
+time = IdExpr
 
 -- ConstExpr v -> \_ -> v
 -- IdExpr -> \x -> x 
 -- ArgExpr f -> \x -> f x           (ArgExpr IdExpr = IdExpr)
 -- UnExpr f expr -> \x -> f $ expr x
 -- BinExpr f expr1 expr1 -> \x -> f (expr1 x) (expr2 x)
-data SigExpr a = IdExpr
-               | ConstExpr a
-               | ArgExpr (SigExpr a)
-               | UnExpr UnOp (SigExpr a)
-               | BinExpr BinOp (SigExpr a) (SigExpr a)
+data SigExpr = IdExpr
+             | ConstExpr Value
+             | UnExpr UnOp SigExpr
+             | BinExpr BinOp SigExpr SigExpr
+             | ApplyArgExpr SigExpr SigExpr
   deriving Show
-
 
 -- ArgExpr (UnExpr Abs IdExpr)
 -- TODO
-simplify :: (Num a, Eq a, Floating a) => SigExpr a -> SigExpr a
+simplify :: SigExpr -> SigExpr
 simplify e = case e of
   IdExpr -> IdExpr
   ConstExpr a -> ConstExpr a
-  ArgExpr exp -> case exp of
-    IdExpr -> IdExpr
-    ConstExpr a -> ConstExpr a
-    UnExpr op exp -> undefined
   UnExpr op exp -> case exp of
     ConstExpr a -> ConstExpr $ (toUnFunc op) a
   BinExpr op a b -> case op of
-    Add -> simplifyAdd e
-    Mult -> simplifyMult e
+    Add -> simplifyAdd (simplify a) (simplify b)
+    Mult -> simplifyMult (simplify a) (simplify b)
     otherwise -> simplify $ BinExpr op (simplify a) (simplify b)
-      
-simplifyMult :: (Num a, Eq a, Floating a) => SigExpr a -> SigExpr a
-simplifyMult e = case e of
-  BinExpr Mult (ConstExpr 0) _ -> ConstExpr 0
-  BinExpr Mult _ (ConstExpr 0) -> ConstExpr 0
-  BinExpr Mult (ConstExpr 1) b -> simplify b
-  BinExpr Mult a (ConstExpr 1) -> simplify a
-  BinExpr Mult (ConstExpr a) (ConstExpr b) -> ConstExpr $ a * b
-  BinExpr Mult a b -> simplify $ BinExpr Mult (simplify a) (simplify b)
+  
 
-simplifyAdd :: (Num a, Eq a, Floating a) => SigExpr a -> SigExpr a
-simplifyAdd e = case e of
-  BinExpr Add (ConstExpr a) (ConstExpr b) -> ConstExpr $ a + b
-  BinExpr Add a b -> simplify $ BinExpr Add (simplify a) (simplify b)
+simplifyMult :: SigExpr -> SigExpr -> SigExpr
+simplifyMult a b
+  | eitherIsConst0 a b = 0
+  | a == 1 = b
+  | b == 1 = a
+  | bothConst a b  = ConstExpr $ (fromConst a) * (fromConst b)
+  | otherwise = a * b
 
-mapTest :: SigExpr Time -> [Value]
+simplifyPow :: SigExpr -> SigExpr -> SigExpr
+simplifyPow a b
+  | bothConst0 a b = 1
+  | a == 0 = 0
+  | b == 0 = 1
+  | a == 1 = 1
+  | b == 1 = a
+  | isPow a = BinExpr Pow (powBase a) (simplify $ b * (powTop a))
+  | otherwise = a ** b
+
+simplifyAdd :: SigExpr -> SigExpr -> SigExpr
+simplifyAdd a b
+  | a == 0 = b
+  | b == 0 = a
+  | bothConst a b = ConstExpr $ (fromConst a) + (fromConst b)
+  | otherwise = a + b
+
+
+powBase (BinExpr Pow a _) = a
+powBase _ = undefined
+
+powTop (BinExpr Pow _ b) = b
+powTop _ = undefined
+
+isPow (BinExpr Pow _ _) = True
+isPow _ = False
+
+bothConst (ConstExpr _) (ConstExpr _) = True
+bothConst _ _ = False
+
+fromConst (ConstExpr a) = a
+fromConst _ = undefined
+
+eitherIsConst0 a b = isConst0 a || isConst0 b
+
+isConst1 (ConstExpr 1) = True
+isConst1 _ = False
+
+mapTest :: SigExpr -> [Value]
 mapTest expr =
   let (Signal sf) = toSignal expr
       domain = [0, 0.1..2]
   in map sf domain
 
-isConst :: SigExpr a -> Bool
+isConst :: SigExpr -> Bool
 isConst (ConstExpr _) = True
 isConst _ = False
 
-
--- INSTANCES
-instance Functor SigExpr where
---  fmap f (ArgExpr op) = ArgExpr 
-  fmap f (ConstExpr a) = ConstExpr $ f a
-  fmap f (UnExpr op e) = UnExpr op $ fmap f e
-  fmap f (BinExpr op e1 e2) = BinExpr op (fmap f e1) (fmap f e2)
-
-
-instance (Eq a, Num a, Floating a) => Eq (SigExpr a) where
+instance Eq SigExpr where
   ConstExpr a == ConstExpr b = a == b
   UnExpr op1 a == UnExpr op2 b =
     op1 == op2 && a == b
@@ -123,10 +160,11 @@ instance (Eq a, Num a, Floating a) => Eq (SigExpr a) where
     op1 == op2 && binExprArgEq op1 (a, b) (c, d)
   _ == _ = False
 
+simplifiedEq a b = simplify a == simplify b
+
 binExprArgEq op (a, b) (c, d) = eqTest (a, b) (c, d)
-  where eqTest
-          | commutativeOp op = eitherPairsEqual 
-          | otherwise = respectivePairsEqual
+  where eqTest = if commutativeOp op
+          then eitherPairsEqual else respectivePairsEqual
   
 commutativeOp :: BinOp -> Bool
 commutativeOp op
@@ -138,44 +176,24 @@ bothAdd _ _ = False
 
 bothMult (BinExpr Mult _ _) (BinExpr Mult _ _) = True
 bothMult _ _ = False
-
-
-{- 
-  IdExpr == IdExpr = True
-  (ConstExpr a) == (ConstExpr b) =
-    a == b
-  (UnExpr op1 a) == (UnExpr op2 b) =
-    op1 == op2 && simplifiedEq a b
-  (BinExpr Add a b) == (BinExpr Add c d) =
-    eitherPairsEqual (a, b) (c, d)
-  (BinExpr Mult a b) == (BinExpr Mult c d) = 
-    eitherPairsEqual (a, b) (c, d)
-  (BinExpr Pow a b) == (BinExpr Pow c d) =
-    respectivePairsEqual (a, b) (c, d)
-  (BinExpr op1 a b) == (BinExpr op2 c d) =
-    op1 == op2 && eitherPairsEqual (fmap simplify (a, b)) (fmap simplify (c, d))
-  _ == _ = False
--}
   
-simplifiedEq a b = simplify a == simplify b
-
-isConst0 :: (Num a, Eq a) => SigExpr a -> Bool
+isConst0 :: SigExpr -> Bool
 isConst0 (ConstExpr 0) = True
 isConst0 _ = False
 
 bothConst0 a b = isConst0 a && isConst0 b
 
 -- | (1, 2) = (2, 1)
-eitherPairsEqual :: (Num a, Eq a, Floating a) => (SigExpr a, SigExpr a) -> (SigExpr a, SigExpr a) -> Bool
+eitherPairsEqual :: (SigExpr, SigExpr) -> (SigExpr, SigExpr) -> Bool
 eitherPairsEqual (a, b) (c, d) = pairs1 || pairs2
   where pairs1 = simplifiedEq a c && simplifiedEq b d
         pairs2 = simplifiedEq a d && simplifiedEq b c
 
 -- | (1, 2) != (2, 1)
-respectivePairsEqual :: (Num a, Eq a, Floating a) => (SigExpr a, SigExpr a) -> (SigExpr a, SigExpr a) -> Bool
+respectivePairsEqual :: (SigExpr, SigExpr) -> (SigExpr, SigExpr) -> Bool
 respectivePairsEqual (a, b) (c, d) =  simplifiedEq a c && simplifiedEq b d
 
-instance (Num a, Eq a) => Num (SigExpr a) where
+instance Num (SigExpr) where
   negate      = UnExpr Negate
   (+)         = BinExpr Add
   (*)         = BinExpr Mult
@@ -183,11 +201,11 @@ instance (Num a, Eq a) => Num (SigExpr a) where
   abs         = UnExpr Abs
   signum      = UnExpr Signum
 
-instance (Fractional a, Eq a) => Fractional (SigExpr a) where
+instance Fractional SigExpr where
   recip = UnExpr Inverse
   fromRational = ConstExpr . fromRational
 
-instance (Floating a, Eq a) => Floating (SigExpr a) where
+instance Floating SigExpr where
   pi    = ConstExpr pi
   sqrt  = UnExpr Sqrt
   exp   = UnExpr Exp
@@ -202,3 +220,5 @@ instance (Floating a, Eq a) => Floating (SigExpr a) where
   asinh = UnExpr Asinh
   atanh = UnExpr Atanh
   acosh = UnExpr Acosh
+
+  

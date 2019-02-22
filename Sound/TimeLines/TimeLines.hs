@@ -107,6 +107,7 @@ reset :: IO ()
 reset = do
   sendStringMessage "/TimeLines/resetSession" ""
   writeSessionRef defaultSession
+  print "Server reset"
 
   
 ------------

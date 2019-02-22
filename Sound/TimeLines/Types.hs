@@ -46,11 +46,16 @@ type Param = String
 -- | type "a" is a function from Time to "a"
 newtype Signal a = Signal {runSig :: Time -> a}
 
--- | A parameter name and the signal to control it
+-- | A signal bundled with a sampling rate 
 type ControlSignal = (Signal Value, SamplingRate)
 
--- | A combination of a Control Signal and a Parameter to control
+-- | A combination of a Control Signal and a Param for it to control
 type ParamSignal = (Param, ControlSignal)
+
+{-
+TODO: data ParamControl = ControlSignal (Param, ControlSignal)
+                        | ControlStatic (Param, Num)
+-}
 
 -- | A list of Param & Signal pairs
 type Synth = [ParamSignal]
@@ -61,7 +66,8 @@ type SynthWithID = (SynthID, Synth)
 -- | A pair of Synths (Output, Input)
 type Patch = (SynthID, SynthID)
 
--- | An Action can either be a Synth or a Path
+-- | An Action is what gets executed when a session is evaluated.
+-- | It can either be Empty, a Synth, or a Patch
 data Action = ActionSynth SynthWithID
             | ActionPatch Patch
             | EmptyAction
@@ -119,7 +125,8 @@ synthList :: Session -> [SynthWithID]
 synthList = map toSynth . filter isSynth . actions
 
 patchList :: Session -> [Patch]
-patchList = map toPatch . filter isPatch . actions
+patchList s = filter (flip elem $ patchList s)
+  $ map toPatch $ filter isPatch $ actions s
 
 --patchList' sess = (patchList sess) ++ [(s, "mainOut") | s <- unPatchedSynths sess]
 
@@ -138,17 +145,15 @@ synthIDList = map fst . synthList
 ftlSR :: FiniteTimeLine -> SamplingRate
 ftlSR (FTL (_, (_, sr)) _) = sr
 
-
 -- Signal Functions --
 
 -- | The identity Signal, always returns the current time
---t :: Signal Value
---t = Signal $ \t -> t
+t :: Signal Value
+t = Signal $ \t -> t
 
 -- | Raises any argument to a constant signal of itself
 constSig :: a -> Signal a
 constSig v = Signal $ \t -> v
-
 
 -- Collector Functions --
 collectList :: Collector a -> [a]
