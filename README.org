@@ -25,10 +25,11 @@ Shortcuts in the Emacs format, such as ~C-a C-b~, are interpreted as pressing ba
 
 *** Quick
 To use TimeLines you will need the following installed:
-1. [SuperCollider](https://supercollider.github.io/download) and the [TimeLines Quark](https://github.com/lnfiniteMonkeys/TimeLines-SC).
-2. [Haskell Platform](https://www.haskell.org/downloads#platform).
-3. [Emacs](https://www.gnu.org/software/emacs/) and the [timelines-mode](https://github.com/lnfiniteMonkeys/TimeLines-emacs). (support for more editors coming soon!)
-4. *Important*: You will also need the C library ~libsndfile~ installed. Installation might vary for different operating systems. See here for more information on [Linux](https://stackoverflow.com/questions/2057395/package-libsndfile-dev-has-no-installation-candidate#2057481), [macOS](http://macappstore.org/libsndfile/) and [Windows](http://www.mega-nerd.com/libsndfile/#Download).
+1. [Git](https://git-scm.com/downloads). This should be installed first, as it will be used for the others.
+2. [SuperCollider](https://supercollider.github.io/download) and the [TimeLines Quark](https://github.com/lnfiniteMonkeys/TimeLines-SC).
+3. [Haskell Platform](https://www.haskell.org/downloads#platform).
+4. [Emacs](https://www.gnu.org/software/emacs/) and the [timelines-mode](https://github.com/lnfiniteMonkeys/TimeLines-emacs). (support for more editors coming soon!)
+5. *Important*: You will also need the C library ~libsndfile~ installed. Installation might vary for different operating systems. See here for more information on [Linux](https://stackoverflow.com/questions/2057395/package-libsndfile-dev-has-no-installation-candidate#2057481), [macOS](http://macappstore.org/libsndfile/) and [Windows](http://www.mega-nerd.com/libsndfile/#Download).
 
 #+CAPTION: The basic color-coded shortcuts for timelines-mode in Emacs
 [[./images/color_keyboard.png]]
