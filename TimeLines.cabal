@@ -1,22 +1,24 @@
--- This file has been generated from package.yaml by hpack version 0.28.2.
+-- This file has been generated from package.yaml by hpack version 0.20.0.
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 54eec29068d05d16acf451a962c32f3566f9346dafca5a905fa7b1fe42517bb6
+-- hash: 92ac25830091bd8ced7c92ce8819338dfb9cc08fc0cb0ce0d85aa15ed7127833
 
 name:           TimeLines
-version:        0.1.0
-synopsis:       Live coding music (in) time.
-description:    See README at <https://github.com/lnfiniteMonkeys/TimeLines/blob/master/README.org>
-category:       Sound
+version:        0.2.0.0
+description:    Please see the README on Github at <https://github.com/lnfiniteMonkeys/TimeLines#readme>
 homepage:       https://github.com/lnfiniteMonkeys/TimeLines#readme
 bug-reports:    https://github.com/lnfiniteMonkeys/TimeLines/issues
-maintainer:     lnfiniteMonkeys <infinitemonkeys@tuta.io>
+author:         lnfiniteMonkeys
+maintainer:     example@example.com
+copyright:      lnfiniteMonkeys
+license:        BSD3
 license-file:   LICENSE
 build-type:     Simple
 cabal-version:  >= 1.10
+
 extra-source-files:
-    CHANGELOG.md
+    ChangeLog.md
     README.org
 
 source-repository head
@@ -24,29 +26,60 @@ source-repository head
   location: https://github.com/lnfiniteMonkeys/TimeLines
 
 library
+  build-depends:
+      base >=4.7 && <5
+    , directory
+    , hosc
+    , hsndfile
+    , mtl
+    , containers
+    , async
+    , filepath
+    , array
+                        
   exposed-modules:
       Sound.TimeLines.Context
+      Sound.TimeLines.Globals
+      Sound.TimeLines.TimeLines
+      Sound.TimeLines.Types
+      Sound.TimeLines.OSC
+      Sound.TimeLines.Util
+      Sound.TimeLines.Instruments
+      Sound.TimeLines.Constants  
   other-modules:
-      Constants
-      Context
-      Globals
-      Instruments
-      OSC
-      Time
-      TimeLines
-      Types
-      Util
       Paths_TimeLines
+  default-language: Haskell2010
+
+executable TimeLines-exe
+  main-is: Main.hs
   hs-source-dirs:
-      Sound/TimeLines
+      app
+  ghc-options: -threaded -rtsopts -with-rtsopts=-N
   build-depends:
-      array
-    , async
-    , base >=4.9 && <5
-    , containers
+      TimeLines
+    , base >=4.7 && <5
     , directory
-    , filepath
     , hosc
-    , hsndfile ==0.8.0
+    , hsndfile
     , mtl
+
+  other-modules:
+      Paths_TimeLines
+  default-language: Haskell2010
+
+test-suite TimeLines-test
+  type: exitcode-stdio-1.0
+  main-is: Spec.hs
+  hs-source-dirs:
+      test
+  ghc-options: -threaded -rtsopts -with-rtsopts=-N
+  build-depends:
+      TimeLines
+    , base >=4.7 && <5
+    , directory
+    , hosc
+    , hsndfile
+    , mtl
+  other-modules:
+      Paths_TimeLines
   default-language: Haskell2010
