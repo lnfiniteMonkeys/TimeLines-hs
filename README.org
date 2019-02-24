@@ -4,7 +4,6 @@ See it in action celebrating 15 years of TOPLAP.org!
 [http://www.youtube.com/watch?v=dsHnWE6_JbE](http://www.youtube.com/watch?v=dsHnWE6_JbE)
 
 #+caption:
-#+attr_html: :width 100px; :height 100px
 [[file:./images/waves.png]]
 
 *** For Musicians
@@ -35,7 +34,8 @@ To use TimeLines you will need the following installed:
 5. *Important*: You will also need the C library ~libsndfile~ installed. Installation might vary for different operating systems. See here for more information on [Linux](https://stackoverflow.com/questions/2057395/package-libsndfile-dev-has-no-installation-candidate#2057481), [macOS](http://macappstore.org/libsndfile/) and [Windows](http://www.mega-nerd.com/libsndfile/#Download).
 
 #+CAPTION: The basic color-coded shortcuts for timelines-mode in Emacs
-[[./images/color_keyboard.png]]
+[[file:./images/color_keyboard.png]]
+
 *** In-Depth
 (coming soon)
 
