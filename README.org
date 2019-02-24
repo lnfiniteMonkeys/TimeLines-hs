@@ -1,6 +1,7 @@
 * TimeLines
 (probably) The world's most powerful, customizable, and live codable modular synth and sequencer.
-[![See it in action celebrating 15 years of TOPLAP.org!](https://img.youtube.com/vi/dsHnWE6_JbE/0.jpg)](http://www.youtube.com/watch?v=dsHnWE6_JbE)
+See it in action celebrating 15 years of TOPLAP.org!
+[http://www.youtube.com/watch?v=dsHnWE6_JbE](http://www.youtube.com/watch?v=dsHnWE6_JbE)
 
 [[.images/waves.png]]
 
