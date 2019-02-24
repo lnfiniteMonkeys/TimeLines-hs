@@ -1,6 +1,9 @@
 * TimeLines
 (probably) The world's most powerful, customizable, and live codable modular synth and sequencer.
 [![See it in action celebrating 15 years of TOPLAP.org!](https://img.youtube.com/vi/dsHnWE6_JbE/0.jpg)](http://www.youtube.com/watch?v=dsHnWE6_JbE)
+
+[[.images/waves.png]]
+
 *** For Musicians
 TimeLines is an extremely powerful, versatile, and customizable modular synth and sequencer in the form of a live coding language. This means that, instead of pressing buttons and turning dials, one writes and modifies code that describes how each synth's parameters should be moving over time. Typically, one would keep changing and adding to the code as a means of developing musical ideas, evaluating every change for instant feedback in the sound produced (hence the term "live coding"). You can think of it as the automation feature of modern DAWs on steroids, only instead of painstakingly clicking and dragging to get that shape just right you use simple maths that do the job for you.
 
@@ -15,6 +18,30 @@ TimeLines is a real-time environment for live coding music as functions of expli
 At the moment, TimeLines is used as the "brains" of the SuperCollider synthesis engine, a completely modular environment for building and connecting sound synthesis and editing processes. TimeLines "plugs" on top of those processes and hijacks their behavior, taking full control of their parameters over time. Synths can be created, freed, and patched into one another in all sorts of different ways, making TimeLines a fully modular synth and sequencer. Everything is purely functional: no state is changed, no envelopes are triggered, no sequencers are manipulated, just waves that dictate the motion of each parameter.
 
 One day, you will even be able to use it for MIDI and CV outputs, allowing for full control over your hardware and modular synths.
+** Installation and Usage
+*Disclaimer*: The installation process is subject to change. In principle it should work on all major OSes (Linux, macOS, Windows), but it hasn't been tested thoroughly yet. If you encounter problems, please email us at [lnfinitemonkeys@tuta.io](lnfinitemonkeys@tuta.io) (mind the first letter) and we'll fix it.
+
+Shortcuts in the Emacs format, such as ~C-a C-b~, are interpreted as pressing back-to-back ~Ctrl-a~ and ~Ctrl-b~.
+
+*** Quick
+To use TimeLines you will need the following installed:
+1. [SuperCollider](https://supercollider.github.io/download) and the [TimeLines Quark](https://github.com/lnfiniteMonkeys/TimeLines-SC).
+2. [Haskell Platform](https://www.haskell.org/downloads#platform).
+3. [Emacs](https://www.gnu.org/software/emacs/) and the [timelines-mode](https://github.com/lnfiniteMonkeys/TimeLines-emacs). (support for more editors coming soon!)
+4. *Important*: You will also need the C library ~libsndfile~ installed. Installation might vary for different operating systems. See here for more information on [Linux](https://stackoverflow.com/questions/2057395/package-libsndfile-dev-has-no-installation-candidate#2057481), [macOS](http://macappstore.org/libsndfile/) and [Windows](http://www.mega-nerd.com/libsndfile/#Download).
+
+#+CAPTION: The basic color-coded shortcuts for timelines-mode in Emacs
+[[./images/color_keyboard.png]]
+*** In-Depth
+(coming soon)
+
+*** Usage
+Once all of these are successfully installed, the following steps will get you up and running with a session:
+1. Start Supercollider and start the server (see boot script). You should see a message confirming that TimeLines has been successfully booted.
+2. Start Emacs, create and navigate to a file ending in ~.tl~ (e.g. by pressing ~C-x C-f~ in Emacs and typing the name of the file), and press ~C-c C-s~ to start a session. More keyboard shortcuts shown below.
+3. Type some code and execute it by pressing ~C-ENTER~. See below for examples that you can copy-paste to make sound.
+
+
 ** Main Concepts
 *** Signal
 Signals are the building blocks of music in TimeLines, defined as functions that take time and return a value. These signals are not what comes out of the speakers, but they are used to control all the parameters of the instruments. Digital or analog, discreete or continuous, signals make the world go round.
@@ -39,10 +66,10 @@ If you are more familiar with programming, you can think of the Window as the vi
 (WIP) A patch represents a routing connection between one or more synths, similar to buses in DAWs or actual patched connections in modular synths.
 *** Session
 (WIP) A session provides a context for all of your synths and signals. There are two main types of sessions, inspired by linear DAW timelines and traditional live coding methods respectively:
-1. *Finite Session*: You specify a window, say ~(0, 5)~ or ~(2*barDur, 4*barDur)~ for some value of ~barDur~ in seconds, and all signals are only evaluated for that window.
-
+- *Finite Session*: You specify a window, say ~(0, 5)~ or ~(2*barDur, 4*barDur)~ for some value of ~barDur~ in seconds, and all signals are only evaluated for that window.
 You can think of it as selecting a section of time in a DAW: you can play it once, loop it, or change all of its parameters while its playing for instant feedback. Ideal for working on a section of a track for some time and then being able to come back and find it exactly how you left it.
-2. *Infinite Session*: Signals are being evaluated in chunks of 0.5 seconds (can be changed) and the window is constantly increasing behind the scenes. Practically, this means that you can write code that does something different every (milli)second, forever. Pretty neat if you ask us.
+
+- *Infinite Session*: Signals are being evaluated in chunks of 0.5 seconds (can be changed) and the window is constantly increasing behind the scenes. Practically, this means that you can write code that does something different every (milli)second, forever. Pretty neat if you ask us.
 ** Code Examples
 #+BEGIN_SRC Haskell
 {-
