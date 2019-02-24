@@ -1,0 +1,27 @@
+name: TimeLines
+version: 0.1.0
+synopsis: Live coding music (in) time.
+description: See README at <https://github.com/lnfiniteMonkeys/TimeLines/blob/master/README.org>
+maintainer: lnfiniteMonkeys <infinitemonkeys@tuta.io>
+github: lnfiniteMonkeys/TimeLines
+category: Sound
+extra-source-files:
+  - CHANGELOG.md
+  - README.org
+
+dependencies:
+  - base >= 4.9 && < 5
+  - directory
+  - hosc
+  - hsndfile == 0.8.0
+  - mtl
+  - containers
+  - async
+  - filepath
+  - array
+  
+library:
+  source-dirs:
+    - Sound/TimeLines
+  exposed-modules:
+    - Sound.TimeLines.Context
