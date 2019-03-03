@@ -6,9 +6,7 @@ import Control.Monad.Writer
 import Data.List
 import qualified Data.Set as Set
 
---import qualified Data.Map.Strict as Map
-
--- | The type actually written to files
+-- | The type of values sent to synths
 -- | (default = Double)
 type Value = Double
 
@@ -22,13 +20,23 @@ windowDur :: Window -> Time
 windowDur (s, e) = e - s
 
 -- | The rate at which a Signal is to be sampled
-type SamplingRate = Int
+type SampleRate = Int
 
 {- ?
 type Scale = [Value] --> used as "Signal Scale"
 type Chord = [Value] --> used as "Signal Chord"
 type ChordProg = [Chord]
 -}
+
+-- | The fundamental type of TimeLines. A Signal of
+-- | type "a" is a function from Time to "a"
+newtype Signal a = Signal { sampleSig :: Time -> a }
+
+-- | A parameter name and the signal to control it
+data ControlSignal = ControlSignal { ctrlParam :: SynthParam
+                                   , ctrlSampleRate :: SampleRate
+                                   , ctrlSignal :: Signal Value
+                                   }
 
 type Scale = [Signal Value]
 type Chord = [Signal Value]
@@ -37,34 +45,24 @@ type ChordProg = [Chord]
 -- | The name of a synth as stored on the server (including SynthDef)
 type SynthID = String
 
-type SynthGroup = String
-
 -- | The name of a SynthDef's parameter
-type Param = String
-
--- | The fundamental type of TimeLines. A Signal of
--- | type "a" is a function from Time to "a"
-newtype Signal a = Signal {runSig :: Time -> a}
-
--- | A parameter name and the signal to control it
-type ControlSignal = (Signal Value, SamplingRate)
-
--- | A combination of a Control Signal and a Parameter to control
-type ParamSignal = (Param, ControlSignal)
+type SynthParam = String
 
 -- | A list of Param & Signal pairs
-type Synth = [ParamSignal]
+data Synth = Synth { synthID :: SynthID
+                   , synthSignals :: [ControlSignal]
+                   }
 
--- | A SynthID & Synth pair
-type SynthWithID = (SynthID, Synth)
+-- | A pair of Synths (src, dst)
+type Patch = (Synth, Synth)
 
--- | A pair of Synths (Output, Input)
-type Patch = (SynthID, SynthID)
-
--- | An Action can either be a Synth or a Path
-data Action = ActionSynth SynthWithID
-            | ActionPatch Patch
+-- | Actions are what define a session
+data Action = SynthAction Synth
+            | PatchAction Patch
+            | ModifierAction SessionModifier
             | EmptyAction
+
+type SessionModifier = Session -> Session
 
 -- | A Collection of objects to be registered along the way
 type Collector a = Writer [a] ()
@@ -76,50 +74,55 @@ data SessionMode = FiniteMode | InfiniteMode
   deriving (Eq, Show)
 
 -- | A list of Actions, a Window, and a Mode
-data Session = Session {actions::[Action],
-                        sessionWindow::Window,
-                        sessionMode::SessionMode
+data Session = Session { sessStartTime :: Time
+                       , sessMode      :: SessionMode
+                       , sessActions   :: [Action]
+                       , sessWindow    :: Window
                        }
 
--- | Everything needed to write a Param control buffer
-data FiniteTimeLine = FTL {ftlParamSig::ParamSignal,
-                           ftlWindow::Window
-                          }
+defaultSamplingRate = 1000 
 
--- Defaults --
-defaultSamplingRate = 700 
-
-defaultSession :: Session
-defaultSession = Session [] (0, 1) FiniteMode
+defaultSession :: Time -> Session
+defaultSession startTime = Session startTime InfiniteMode [] (0, 1)
 
 defaultSignal :: Signal Value
 defaultSignal = Signal (\t -> 0)
 
-
 -- Action Functions --
-isSynth :: Action -> Bool
-isSynth (ActionSynth _) = True
-isSynth _ = False
+isSynthAction :: Action -> Bool
+isSynthAction (SynthAction _) = True
+isSynthAction _ = False
 
-toSynth :: Action -> SynthWithID
-toSynth (ActionSynth s) = s
+toSynth :: Action -> Synth
+toSynth (SynthAction s) = s
 toSynth _ = undefined
 
-isPatch :: Action -> Bool
-isPatch (ActionPatch _) = True
-isPatch _ = False
+isPatchAction :: Action -> Bool
+isPatchAction (PatchAction _) = True
+isPatchAction _ = False
 
 toPatch :: Action -> Patch
-toPatch (ActionPatch p) = p
+toPatch (PatchAction p) = p
 toPatch _ = undefined
 
+isSessAction :: Action -> Bool
+isSessAction (ModifierAction _) = True
+isSessAction _ = undefined
+
+toSessModifier :: Action -> SessionModifier
+toSessModifier (ModifierAction a) = a
+toSessModifier _ = undefined
 
 -- Session Functions --
-synthList :: Session -> [SynthWithID]
-synthList = map toSynth . filter isSynth . actions
+-- TODO: refactor this in type class?
+synthList :: Session -> [Synth]
+synthList = map toSynth . filter isSynthAction . sessActions
 
 patchList :: Session -> [Patch]
-patchList = map toPatch . filter isPatch . actions
+patchList = map toPatch . filter isPatchAction . sessActions
+
+sessModifierList :: Session -> [SessionModifier]
+sessModifierList = map toSessModifier . filter isSessAction . sessActions
 
 --patchList' sess = (patchList sess) ++ [(s, "mainOut") | s <- unPatchedSynths sess]
 
@@ -132,23 +135,18 @@ removeDups :: Ord a => [a] -> [a]
 removeDups = Set.toList . Set.fromList
 
 synthIDList :: Session -> [SynthID]
-synthIDList = map fst . synthList
-
--- FiniteTimeLine functions --
-ftlSR :: FiniteTimeLine -> SamplingRate
-ftlSR (FTL (_, (_, sr)) _) = sr
-
+synthIDList = map synthID . synthList
 
 -- Signal Functions --
-
--- | The identity Signal, always returns the current time
-t :: Signal Value
-t = Signal $ \t -> t
 
 -- | Raises any argument to a constant signal of itself
 constSig :: a -> Signal a
 constSig v = Signal $ \t -> v
 
+-- | The identity Signal, always returns the current time
+idSig :: Signal Time
+idSig = Signal $ \t -> t
+t = idSig
 
 -- Collector Functions --
 collectList :: Collector a -> [a]
@@ -160,16 +158,14 @@ register a = tell [a]
 registerEmptyAction :: Collector Action
 registerEmptyAction = register EmptyAction
 
-registerSynthAction :: SynthWithID -> Collector Action
-registerSynthAction = register . ActionSynth
+registerSynthAction :: Synth -> Collector Action
+registerSynthAction = register . SynthAction
 
 registerPatchAction :: Patch -> Collector Action
-registerPatchAction = register . ActionPatch
+registerPatchAction = register . PatchAction
 
-registerParam :: ParamSignal -> Collector ParamSignal
-registerParam = register
 
-  ---------------------------INSTANCES---------------------------
+---------------------------INSTANCES---------------------------
 -- FUNCTOR
 instance Functor Signal where
   fmap f (Signal sf) = Signal $ fmap f sf
@@ -181,8 +177,8 @@ instance Functor Signal where
 instance Applicative Signal where
   -- Transform a value "a" to a signal of constant value "a"
   pure = constSig
-  liftA2 f s1 s2 = Signal $ \t -> f (runSig s1 t) (runSig s2 t)
-  sf <*> s = Signal $ \t -> (runSig sf t) (runSig s t)
+  liftA2 f s1 s2 = Signal $ \t -> f (sampleSig s1 t) (sampleSig s2 t)
+  sf <*> s = Signal $ \t -> (sampleSig sf t) (sampleSig s t)
   -- A signal with function "f" of type "Time -> (a -> b)", applied at Time "t" to
   -- a signal with function "x" of type "Time -> b", is equal to the value of f for
   -- Time t, applied to the value of x for Time t
@@ -192,7 +188,7 @@ instance Monad Signal where
   return = pure
   (Signal s) >>= f = Signal $ \t -> let firstResult = s t
                                         sigB = f firstResult
-                                    in  runSig sigB t
+                                    in  sampleSig sigB t
 
 -- | Lazy multiplicator, doesn't evauate the second
 -- | term if first term is equal to 0

@@ -12,7 +12,7 @@ bug-reports:    https://github.com/lnfiniteMonkeys/TimeLines/issues
 author:         lnfiniteMonkeys
 maintainer:     lnfinitemonkeys@tuta.io
 copyright:      lnfiniteMonkeys
-license:        GNU GPL v3
+license:        GPL-3
 license-file:   LICENSE
 build-type:     Simple
 cabal-version:  >= 1.10
