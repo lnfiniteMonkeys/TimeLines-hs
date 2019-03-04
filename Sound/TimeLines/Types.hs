@@ -1,11 +1,12 @@
 module Sound.TimeLines.Types where
 
 import Control.Applicative
+import Control.Concurrent (ThreadId)
 import Control.Monad
 import Control.Monad.Writer
 import Data.List
 import qualified Data.Set as Set (toList, fromList)
-
+import qualified Data.Map.Strict as Map
 
 -- | The type of values sent to synths
 type Value = Double
@@ -69,10 +70,16 @@ type Collector a = Writer [a] ()
 data SessionMode = FiniteMode | InfiniteMode
   deriving (Eq, Show)
 
+
+data ParamThreadID = ParamID SynthID SynthParam SampleRate
+  deriving Eq
+
+
 -- | A list of Actions, a Window, and a Mode
 data Session = Session { sessStartTime :: Time
                        , sessMode      :: SessionMode
                        , sessActions   :: [Action]
+                       , sessThreadMap :: Map.Map ParamThreadID ThreadId
                        , sessWindow    :: Window
                        }
 
@@ -84,7 +91,7 @@ defaultSampleRate :: Int
 defaultSampleRate = 1000 
 
 defaultSession :: Session
-defaultSession = Session 0 InfiniteMode [] (0, 1)
+defaultSession = Session 0 InfiniteMode [] Map.empty (0, 1)
 
 defaultSignal :: Signal Value
 defaultSignal = Signal (\t -> 0)

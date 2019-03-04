@@ -13,23 +13,31 @@ import System.IO.Unsafe (unsafePerformIO)
 import Control.Monad (void, when)
 --import Control.Monad.Writer (Writer, execWriter, tell)
 import Data.IORef (IORef, newIORef, readIORef, writeIORef, modifyIORef')
---import qualified Data.Map.Strict as Map
+import qualified Data.Map.Strict as Map
 import Numeric (showFFloat)
 
 {- INTERFACE FUNCTIONS -}
 
+
+
 -- fork session wrappers?
 emptyForkIO = void . forkIO
-
--- | A session in which the window is explicit and static
--- | (that window can be either looped or one-shot trigerred)
-finiteSession :: Window -> Collector Action -> IO ()
-finiteSession w actions = undefined
 
 -- | A session in which time constantly and infinitely
 -- | increases (with the option of resetting it at any point)
 infiniteSession :: Collector Action -> IO ()
-infiniteSession as = undefined
+infiniteSession as = do
+  prevSess <- readSessionRef
+  let actionList = collectList as
+      --prevThreads = 
+  -- get list of all threads that should be running
+  -- check to see which ones sholud get cancelled
+  -- 
+  return ()
+
+
+
+
 
 -- | Interface function that groups params into Synths
 synth :: SynthID -> Collector ControlSignal -> Collector Action
@@ -90,6 +98,8 @@ evalSession sess = do
       patches = patchList sess
       modifiers = sessModifierList sess
   undefined
+
+
 
 evalCurrSession :: IO ()
 evalCurrSession = readIORef globalSessionRef >>= evalSession
