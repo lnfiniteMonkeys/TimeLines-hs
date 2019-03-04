@@ -18,34 +18,22 @@ import Numeric (showFFloat)
 
 {- INTERFACE FUNCTIONS -}
 
-
 -- fork session wrappers?
 emptyForkIO = void . forkIO
 
 -- | A session in which the window is explicit and static
 -- | (that window can be either looped or one-shot trigerred)
 finiteSession :: Window -> Collector Action -> IO ()
-finiteSession w actions = do
-  let newSess = Session (collectList actions) w FiniteMode
-  evalSession newSess
-  writeSessionRef newSess
+finiteSession w actions = undefined
 
 -- | A session in which time constantly and infinitely
 -- | increases (with the option of resetting it at any point)
 infiniteSession :: Collector Action -> IO ()
-infiniteSession as = do
-  (Session _ w prevMode) <- readSessionRef
-  case prevMode of
-    InfiniteMode -> writeSessionRef $ Session (collectList as) w InfiniteMode
-    FiniteMode -> do
-        let newWindow = (0, windowStep)
-            newSess = Session (collectList as) newWindow InfiniteMode
-        evalSession newSess
-        writeSessionRef newSess
+infiniteSession as = undefined
 
 -- | Interface function that groups params into Synths
-synth :: SynthID -> Collector ParamSignal -> Collector Action
-synth id params = registerSynthAction (id, collectList params)
+synth :: SynthID -> Collector ControlSignal -> Collector Action
+synth id ps = registerSynthAction $ Synth id $ collectList ps
 
 -- | Ignores a synth
 mute :: Collector Action -> Collector Action
@@ -55,13 +43,13 @@ mute s = register EmptyAction
 solo = undefined
 
 -- | Interface function that registers signals to a Synth
-addParam :: Param -> Signal Value -> Collector ParamSignal
-addParam p sig = registerParam (p, (sig, fromIntegral defaultSamplingRate))
+addParam :: SynthParam -> Signal Value -> Collector ControlSignal
+addParam p sig = register $ ControlSignal p defaultSampleRate sig
 (<><) = addParam
 
 -- | Same as above, but with user-defined sampling rate
-addParamSR :: Param -> SamplingRate -> Signal Value -> Collector ParamSignal
-addParamSR p sr sig = registerParam (p, (sig, sr))
+addParamSR :: SynthParam -> SampleRate -> Signal Value -> Collector ControlSignal
+addParamSR p sr sig = register $ ControlSignal p sr sig
 (<><<) = addParamSR
 
 -- | Register a patch between two synths
@@ -70,21 +58,8 @@ patchSynths src dst = registerPatchAction (src, dst)
 (><>) = patchSynths
 
 ------------
-{- UPDATE LOOP -}
--- | OSC receiving server
-setupOSC :: IO ()
-setupOSC = udpServer (incrementAndEvalIfInfinite, evalCurrSession) 
-
-incrementAndEvalIfInfinite :: IO ()
-incrementAndEvalIfInfinite = do
-  sess <- readSessionRef
-  when (isInfiniteSession sess) $ do
-    let newSess = incrementWindowBy windowStep sess
-    writeSessionRef newSess
-    evalSession newSess
-
 isInfiniteSession :: Session -> Bool
-isInfiniteSession (Session _ _ m) = m == InfiniteMode
+isInfiniteSession s = sessMode s == InfiniteMode
 
 isFiniteSession :: Session -> Bool
 isFiniteSession = not . isInfiniteSession
@@ -95,45 +70,26 @@ readSessionRef = readIORef globalSessionRef
 writeSessionRef :: Session -> IO ()
 writeSessionRef s = modifyIORef' globalSessionRef $ \_ -> s
 
--- | Fixed increment by which the window increases in an infinite session
-windowStep :: Time
-windowStep = 0.5
-
 incrementWindowBy :: Time -> Session -> Session
-incrementWindowBy amt (Session as (s, e) m) = 
-  Session as (s+amt, e+amt) m
+incrementWindowBy amt sess = undefined
 
 reset :: IO ()
 reset = do
   sendStringMessage "/TimeLines/resetSession" ""
   writeSessionRef defaultSession
-
-  
+ 
 ------------
 {- Eval functions -}
 
 -- | Evaluate all actions in the current Session
 -- | and update the server
 evalSession :: Session -> IO ()
-evalSession sess@(Session as w m) = do
+evalSession sess = do
   let synthNames = synthIDList sess
       synthsWithID = synthList sess
       patches = patchList sess
-  -- Send session mode, followed by synth names
-  sendStringMessages "/TimeLines/setSession" $ [show m] ++ synthNames
-  sendStringMessage "/TimeLines/setWindowDur" $ show $ windowDur w
-  -- Write all buffers to disk and get a list of lists of paths
-  listsOfPaths <- mapConcurrently (evalSynthWithID w) synthsWithID
-  -- Send all filepaths to be loaded
-  mapM_ (sendStringMessages "/TimeLines/loadSynthBuffers") listsOfPaths
-  -- Set the order of synth execution (relevant for patches)
-  sendStringMessages "/TimeLines/setSynthOrder" $ sortPatches patches
-  -- Send patches that should be performed
-  sendStringMessages "/TimeLines/setPatches" $ flattenPatches patches
-  sendIntMessage "/TimeLines/setMute" 0
-
-showWindowStep :: String
-showWindowStep = Numeric.showFFloat Nothing windowStep ""
+      modifiers = sessModifierList sess
+  undefined
 
 evalCurrSession :: IO ()
 evalCurrSession = readIORef globalSessionRef >>= evalSession
@@ -142,30 +98,11 @@ sendWindow :: Window -> IO ()
 sendWindow (s, e) = sendStringMessage "/TimeLines/setWindowDur" $ show $ e - s
 
 -- | Write a synth's signal buffers, return all filepaths
-evalSynthWithID :: Window -> SynthWithID -> IO [FilePath]
-evalSynthWithID w (synthID, synth) = do
-  mapConcurrently (writeParam synthID w) synth
-
-
--- TODO: clean up
--- | Takes a param and a signal, evaluates it over the current window
--- | writes it to a file, and returns its filepath
-writeParam :: SynthID -> Window -> ParamSignal -> IO FilePath
-writeParam synthID w pSig@(p, (sig, sr)) = do
-  let filePath = pathToTemp ++ synthID ++ "_" ++ p ++ ".w64"
-      ftl = FTL pSig w
-  _ <- removeFileIfExists filePath
-  h <- openHandle filePath ftl
-  arrayPtr <- getArrayPtr ftl
-  framesWritten <- SF.hPutBuf h arrayPtr $ ftlNumSteps ftl
-  closeHandle h
-  return filePath
+evalSynth :: Window -> Synth -> IO [FilePath]
+evalSynth w s = undefined
   
 replaceActions :: [Action] -> Session -> Session
-replaceActions newActions (Session _ w m) = Session newActions w m
-
-sendLoadSynthBuffers :: [Param] -> IO ()
-sendLoadSynthBuffers filepaths = sendStringMessages "/TimeLines/load" filepaths
+replaceActions newActions (Session st m as w) = undefined
 
 --sendLoadAllSynths :: [(SynthID, )]
 {- PRINT FUNCTIONS -}
@@ -186,14 +123,10 @@ printPatches =
   print . map (\(s1, s2) -> show $ s1 ++ "->>" ++ s2 ++ " ")
 
 printWindow :: IO ()
-printWindow = do
-  (Session _ w _) <- readIORef globalSessionRef
-  putStrLn $ (++) "Current window: " $ show w
+printWindow = undefined
 
 printMode :: IO ()
-printMode = do
-  (Session _ _ m) <- readIORef globalSessionRef
-  putStrLn $ (++) "Current mode: " $ show m
+printMode = undefined
 
 pathToTemp :: FilePath
 pathToTemp = unsafePerformIO getTLTempDir

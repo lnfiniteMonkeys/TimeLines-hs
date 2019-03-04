@@ -4,10 +4,10 @@ import Control.Applicative
 import Control.Monad
 import Control.Monad.Writer
 import Data.List
-import qualified Data.Set as Set
+import qualified Data.Set as Set (toList, fromList)
+
 
 -- | The type of values sent to synths
--- | (default = Double)
 type Value = Double
 
 -- | The type passed to Signals
@@ -38,10 +38,6 @@ data ControlSignal = ControlSignal { ctrlParam :: SynthParam
                                    , ctrlSignal :: Signal Value
                                    }
 
-type Scale = [Signal Value]
-type Chord = [Signal Value]
-type ChordProg = [Chord]
-
 -- | The name of a synth as stored on the server (including SynthDef)
 type SynthID = String
 
@@ -54,7 +50,7 @@ data Synth = Synth { synthID :: SynthID
                    }
 
 -- | A pair of Synths (src, dst)
-type Patch = (Synth, Synth)
+type Patch = (SynthID, SynthID)
 
 -- | Actions are what define a session
 data Action = SynthAction Synth
@@ -80,10 +76,15 @@ data Session = Session { sessStartTime :: Time
                        , sessWindow    :: Window
                        }
 
-defaultSamplingRate = 1000 
+type Scale = [Signal Value]
+type Chord = [Signal Value]
+type ChordProg = [Chord]
 
-defaultSession :: Time -> Session
-defaultSession startTime = Session startTime InfiniteMode [] (0, 1)
+defaultSampleRate :: Int
+defaultSampleRate = 1000 
+
+defaultSession :: Session
+defaultSession = Session 0 InfiniteMode [] (0, 1)
 
 defaultSignal :: Signal Value
 defaultSignal = Signal (\t -> 0)
@@ -131,9 +132,6 @@ sessModifierList = map toSessModifier . filter isSessAction . sessActions
 
 --patchedSynths sess = removeDups [src | (src, dst) <- patchList' sess]
 
-removeDups :: Ord a => [a] -> [a]
-removeDups = Set.toList . Set.fromList
-
 synthIDList :: Session -> [SynthID]
 synthIDList = map synthID . synthList
 
@@ -163,7 +161,6 @@ registerSynthAction = register . SynthAction
 
 registerPatchAction :: Patch -> Collector Action
 registerPatchAction = register . PatchAction
-
 
 ---------------------------INSTANCES---------------------------
 -- FUNCTOR
@@ -227,4 +224,3 @@ instance (Floating a, Eq a) => Floating (Signal a) where
   asinh = fmap asinh
   atanh = fmap atanh
   acosh = fmap acosh
-
