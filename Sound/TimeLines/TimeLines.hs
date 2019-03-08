@@ -23,19 +23,16 @@ import Numeric (showFFloat)
 -- fork session wrappers?
 emptyForkIO = void . forkIO
 
--- | A session in which time constantly and infinitely
--- | increases (with the option of resetting it at any point)
-infiniteSession :: Collector Action -> IO ()
-infiniteSession as = do
-  prevSess <- readSessionRef
-  let actionList = collectList as
-      --prevThreads = 
-  -- get list of all threads that should be running
-  -- check to see which ones sholud get cancelled
-  -- 
-  return ()
 
-
+-- pseudocode
+updateSession :: Collector Action -> IO ()
+updateSession as = do
+  let prevThreads
+      newThreads
+      threadsToKill
+      threadsToSpawn
+  killThreads threadsToKill
+  newThreads <- spawnThreads threadsToSpawn
 
 
 
