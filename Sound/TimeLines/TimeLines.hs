@@ -23,7 +23,7 @@ import Numeric (showFFloat)
 -- fork session wrappers?
 emptyForkIO = void . forkIO
 
-
+{- 
 -- pseudocode
 updateSession :: Collector Action -> IO ()
 updateSession as = do
@@ -33,12 +33,17 @@ updateSession as = do
       threadsToSpawn
   killThreads threadsToKill
   newThreads <- spawnThreads threadsToSpawn
-
+-}
 
 
 -- | Interface function that groups params into Synths
 synth :: SynthID -> Collector ControlSignal -> Collector Action
 synth id ps = registerSynthAction $ Synth id $ collectList ps
+
+{- 
+mapSynth :: (Signal Value -> Signal Value) -> CollectorAction -> CollectorAction
+mapSynth f  = register
+-}
 
 -- | Ignores a synth
 mute :: Collector Action -> Collector Action
@@ -91,8 +96,8 @@ reset = do
 evalSession :: Session -> IO ()
 evalSession sess = do
   let synthNames = synthIDList sess
-      synthsWithID = synthList sess
-      patches = patchList sess
+      synthsWithID = sessSynthList sess
+      patches = sessPatchList sess
       modifiers = sessModifierList sess
   undefined
 
@@ -109,7 +114,7 @@ evalSynth :: Window -> Synth -> IO [FilePath]
 evalSynth w s = undefined
   
 replaceActions :: [Action] -> Session -> Session
-replaceActions newActions (Session st m as w) = undefined
+replaceActions newActions (Session st m as evT w) = undefined
 
 --sendLoadAllSynths :: [(SynthID, )]
 {- PRINT FUNCTIONS -}
@@ -117,7 +122,7 @@ replaceActions newActions (Session st m as w) = undefined
 printNumSynths :: IO ()
 printNumSynths = do
   sess <- readIORef globalSessionRef
-  putStrLn $ (++) "Number of running synths: " $ show $ length $ synthList sess
+  putStrLn $ (++) "Number of running synths: " $ show $ length $ sessSynthList sess
 
 printSynths :: IO ()
 printSynths = do

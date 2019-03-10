@@ -29,21 +29,27 @@ type Chord = [Value] --> used as "Signal Chord"
 type ChordProg = [Chord]
 -}
 
--- | The fundamental type of TimeLines. A Signal of
--- | type "a" is a function from Time to "a"
 newtype Signal a = Signal { sampleSig :: Time -> a }
 
--- | A parameter name and the signal to control it
-data ControlSignal = ControlSignal { ctrlParam :: SynthParam
+-- | Everything needed to know to control a parameter
+data ControlSignal = ControlSignal { ctrlSynthParam :: SynthParam
                                    , ctrlSampleRate :: SampleRate
-                                   , ctrlSignal :: Signal Value
+                                   , ctrlSignal     :: Signal Value
                                    }
+
+data ControlThread = ControlThread { ctrlThreadID  :: ThreadId
+                                   , ctrlThreadSig :: ControlSignal}
+
+ctrlSynthID = fst . ctrlSynthParam
+
+ctrlParam = snd . ctrlSynthParam
 
 -- | The name of a synth as stored on the server (including SynthDef)
 type SynthID = String
 
--- | The name of a SynthDef's parameter
-type SynthParam = String
+type Param = String
+
+type SynthParam = (SynthID, Param)
 
 -- | A list of Param & Signal pairs
 data Synth = Synth { synthID :: SynthID
@@ -79,8 +85,8 @@ data ParamThreadID = ParamID SynthID SynthParam SampleRate
 data Session = Session { sessStartTime :: Time
                        , sessMode      :: SessionMode
                        , sessActions   :: [Action]
-                       , sessThreadMap :: Map.Map ParamThreadID ThreadId
-                       , sessWindow    :: Window
+                       , sessThreadIDs :: Map.Map ControlSignal ThreadId
+                       , sessWindow    :: Maybe Window
                        }
 
 type Scale = [Signal Value]
@@ -91,7 +97,10 @@ defaultSampleRate :: Int
 defaultSampleRate = 1000 
 
 defaultSession :: Session
-defaultSession = Session 0 InfiniteMode [] Map.empty (0, 1)
+defaultSession = Session 0 InfiniteMode [] Map.empty Nothing
+
+emptySession :: Time -> Session
+emptySession t = Session t InfiniteMode [] Map.empty Nothing
 
 defaultSignal :: Signal Value
 defaultSignal = Signal (\t -> 0)
@@ -113,34 +122,40 @@ toPatch :: Action -> Patch
 toPatch (PatchAction p) = p
 toPatch _ = undefined
 
-isSessAction :: Action -> Bool
-isSessAction (ModifierAction _) = True
-isSessAction _ = undefined
+isSessModifier :: Action -> Bool
+isSessModifier (ModifierAction _) = True
+isSessModifier _ = undefined
 
 toSessModifier :: Action -> SessionModifier
 toSessModifier (ModifierAction a) = a
 toSessModifier _ = undefined
 
 -- Session Functions --
--- TODO: refactor this in type class?
-synthList :: Session -> [Synth]
-synthList = map toSynth . filter isSynthAction . sessActions
 
-patchList :: Session -> [Patch]
-patchList = map toPatch . filter isPatchAction . sessActions
+-- TODO: refactor this in type class?
+sessSynthList :: Session -> [Synth]
+sessSynthList = map toSynth . filter isSynthAction . sessActions
+
+sessPatchList :: Session -> [Patch]
+sessPatchList = map toPatch . filter isPatchAction . sessActions
 
 sessModifierList :: Session -> [SessionModifier]
-sessModifierList = map toSessModifier . filter isSessAction . sessActions
+sessModifierList = map toSessModifier . filter isSessModifier . sessActions
 
---patchList' sess = (patchList sess) ++ [(s, "mainOut") | s <- unPatchedSynths sess]
+sessControlSigList :: Session -> [ControlSignal]
+sessControlSigList = concat . map synthSignals . sessSynthList
+
+
+
+--sessPatchList' sess = (sessPatchList sess) ++ [(s, "mainOut") | s <- unPatchedSynths sess]
 
 --unPatchedSynths :: Session -> [SynthID]
 --unPatchedSynths sess = synthIDList sess \\ patchedSynths sess
 
---patchedSynths sess = removeDups [src | (src, dst) <- patchList' sess]
+--patchedSynths sess = removeDups [src | (src, dst) <- sessPatchList' sess]
 
 synthIDList :: Session -> [SynthID]
-synthIDList = map synthID . synthList
+synthIDList = map synthID . sessSynthList
 
 -- Signal Functions --
 

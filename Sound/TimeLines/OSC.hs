@@ -41,7 +41,12 @@ sendIntMessage :: String -> Int -> IO ()
 sendIntMessage path i = do
   FD.sendOSC globalUDPRef $ OSC.Message path [OSC.int32 i]
   when debugMode $ putStrLn $ "sent Int message: " ++ path ++  " " ++ (show i)
-  
+
+sendFloatMessage :: String -> Value -> IO ()
+sendFloatMessage path f = do
+  FD.sendOSC globalUDPRef $ OSC.Message path [OSC.float f]
+  when debugMode $ putStrLn $ "sent Int message: " ++ path ++  " " ++ (show f)
+
 sendTestMessage :: IO ()
 sendTestMessage = sendStringMessage "TimeLines" "test"
 
