@@ -37,6 +37,7 @@ library
     , filepath
     , array
     , strict-concurrency
+    , deepseq
 
   exposed-modules:
       Sound.TimeLines.Context
