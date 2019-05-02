@@ -15,7 +15,7 @@ import Control.Monad (void, when)
 import Data.IORef (IORef, newIORef, readIORef, writeIORef, modifyIORef')
 --import qualified Data.Map.Strict as Map
 import Numeric (showFFloat)
-
+--import Data.Global
 {- INTERFACE FUNCTIONS -}
 
 
@@ -107,6 +107,7 @@ reset :: IO ()
 reset = do
   sendStringMessage "/TimeLines/resetSession" ""
   writeSessionRef defaultSession
+  print "Server reset"
 
   
 ------------

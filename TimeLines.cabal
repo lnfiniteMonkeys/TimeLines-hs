@@ -37,7 +37,7 @@ library
     , filepath
     , array
     , strict-concurrency
-                                  
+
   exposed-modules:
       Sound.TimeLines.Context
       Sound.TimeLines.Globals
