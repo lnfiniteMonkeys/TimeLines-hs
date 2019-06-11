@@ -53,7 +53,7 @@ raise amt sig = amt +(1-amt)*sig
 
 -- | Takes a scale and a list of degrees and returns a list of chords
 degreesToChords :: Scale -> [Signal Value] -> ChordProg
-degreesToChords scale deg = map (degree scale) deg
+degreesToChords scale deg = map (degree scale . add 1) deg
 
 -- | Returns a list of ratios representing a degree of a scale
 degree :: Scale -> Signal Value -> [Signal Value]
@@ -96,7 +96,8 @@ flor s = Signal $ \t -> fromIntegral $ floor (runSig s t)
 binaryRand s = flor $ mul 2 $ rand s
 
 
--- | Indexes into a pseudo-random domain using a signal
+-- | Indexes into a sine-based pseudo-random domain using a signal
+-- TODO: add more distributions
 rand :: (RealFrac a, Floating a) => Signal a -> Signal a
 rand s = Signal $ \t -> fract $ (0.5 + 0.5 * (sin $ runSig s t))*1293984.31323
 
@@ -116,14 +117,13 @@ slow (Signal amt) (Signal sf) = Signal $ \t -> sf $ t/(amt t)
 -- | Takes bpm, number of beats in a bar, and number of bars
 -- | and returns two phasors, one for beat and one for bar,
 -- | and the beat, bar, and total durations
-bpmToPhasors :: Signal Value -> Signal Value -> Signal Value -> (Signal Value, Signal Value, Signal Value, Signal Value, Time)
-bpmToPhasors bpm numBeats numBars =
+--bpmToPhasors :: Signal Value -> Signal Value -> Signal Value -> (Signal Value, Signal Value, Signal Value, Signal Value, Time)
+bpmToPhasors bpm beatsPerBar =
   let beatDur = 60/bpm
-      barDur = numBeats*beatDur
-      totalDur = barDur*numBars
-      phasorBeat = wrap01 $ t/beatDur
-      phasorBar = wrap01 $ t/barDur
-  in  (phasorBeat, phasorBar, beatDur, barDur, constSigToValue totalDur)
+      barDur = beatsPerBar*beatDur
+      beatPhasor = wrap01 $ t/beatDur
+      barPhasor = wrap01 $ t/barDur
+  in  (beatPhasor, barPhasor, beatDur, barDur)
 
 
 -- | Takes two signals and returns 1 if both of them are 1,
@@ -194,7 +194,7 @@ sqr = sign . sin
 --add :: (Num a) => Signal a -> Signal a -> Signal a
 add = liftA2 (+)
 mul = liftA2 lazyMul
-
+div a = mul (1/a) 
 
 --Ken Perlin, "Texturing and Modeling: A Procedural Approach"
 -- | Smoothstep
