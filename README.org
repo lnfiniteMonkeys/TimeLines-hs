@@ -2,25 +2,27 @@
 #+caption:
 [[file:./images/waves.png]]
 
-(probably) The world's most powerful, customizable, and live codable modular synth and sequencer.
+A versatile, customizable, and live codable modular synth and sequencer.
 See it in action celebrating 15 years of TOPLAP.org!
 
 http://www.youtube.com/watch?v=dsHnWE6_JbE
 
-*** For Musicians
-TimeLines is an extremely powerful, versatile, and customizable modular synth and sequencer in the form of a live coding language. This means that, instead of pressing buttons and turning dials, one writes and modifies code that describes how each synth's parameters should be moving over time. Typically, one would keep changing and adding to the code as a means of developing musical ideas, evaluating every change for instant feedback in the sound produced (hence the term "live coding"). You can think of it as the automation feature of modern DAWs on steroids, only instead of painstakingly clicking and dragging to get that shape just right you use simple maths that do the job for you.
+*** What is it?
+TimeLines is an extremely powerful, versatile, and customizable modular synth and sequencer in the form of a live coding language. This means that instead of patching cables, moving sliders, and turning dials, one writes and modifies mathematical functions in  that describes how each synth's parameters should be moving over time. 
 
-TimeLines is based on the idea that music is a function of time. This simply means that, ultimately, music is what emerges as time flows forwards, bringing about all changes in sound that we perceive as melodies, rhythms, chord progressions etc. In other words, if a painting is experienced by looking along the space of a canvas, then a piece of music is experienced by listening to it through time, from its beginning till the end. TimeLines builds on that concept by forming all musical structure as functions of explicit time. "Explicit" simply means that time is not dealt with behind the scenes, as is the case for most synthesizers and music software, but is rather brought to the surface and subjected to any and all kinds of transformations: we can stretch it, compress it, loop it, speed it up and slow it down, and give it all sorts of funny shapes.
+You can think of it as the automation feature of modern DAWs on steroids, only instead of painstakingly clicking and dragging to get that shape just right, you use maths that do the job for you.
+
+TimeLines is based on the idea that music is a function of time. This simply means that, ultimately, music is what emerges as time flows forwards, bringing about all changes in sound that we perceive as melodies, rhythms, chord progressions etc. TimeLines builds on that concept by forming all musical structure as functions of time. Time is not dealt with behind the scenes as is the case for most synthesizers and music software, but is rather brought to the surface and subjected to all kinds of transformations: we can stretch it, compress it, loop it, turn it into steps, speed it up and slow it down, and give it all sorts of funny shapes.
 
 Every parameter of a musical process (synth, effect, sequence etc.) is controlled through an equation that asks a simple question: "If the time right now is 't' seconds (counting from the beginning of the piece), what value should this parameter have right now?". This question is then answered for every consecutive moment in time, essentially mapping out the "automation line" of that parameter. This allows one to become arbitrarily specific when making music, gaining full control over each and every aspect of their sound and composition.
 
-The best part? The level of maths required is taught in schools, with the overwhelming majority of the equations using just additions, subtractions, multiplications, and divisions. All you have to do is learn how each of these changes the sound and behavior of your instruments. 
-*** For Programmers
+The best part? The level of maths required is taught in schools, with the overwhelming majority of the equations using just addition, subtraction, multiplication, division, and modulo operations. All you have to do is learn how each of these changes the sound and behavior of your instruments. 
+*** The Technical Bits
 TimeLines is a real-time environment for live coding music as functions of explicit time. It is embedded in Haskell, a purely functional programming language, and currently lives within the Emacs programmable editor. It acts as a front-end to the SuperCollider synthesis server, modulating all parameters of a synth (such as its amplitude, frequency, filter cutoff etc.) over time by sampling mathematical equations hundreds or thousands of times per second.
 
 At the moment, TimeLines is used as the "brains" of the SuperCollider synthesis engine, a completely modular environment for building and connecting sound synthesis and editing processes. TimeLines "plugs" on top of those processes and hijacks their behavior, taking full control of their parameters over time. Synths can be created, freed, and patched into one another in all sorts of different ways, making TimeLines a fully modular synth and sequencer. Everything is purely functional: no state is changed, no envelopes are triggered, no sequencers are manipulated, just waves that dictate the motion of each parameter.
 
-One day, you will even be able to use it for MIDI and CV outputs, allowing for full control over your hardware and modular synths.
+Soon you will also be able to use it to control your hardware and modular synths using MIDI and CV.
 ** Installation and Usage
 *Disclaimer*: The installation process is subject to change. In principle it should work on all major OSes (Linux, macOS, Windows), but it hasn't been tested thoroughly yet. If you encounter problems, please email us at [lnfinitemonkeys@tuta.io](lnfinitemonkeys@tuta.io) (mind the first letter) and we'll fix it.
 
@@ -28,11 +30,12 @@ Shortcuts in the Emacs format, such as ~C-a C-b~, are interpreted as pressing ba
 
 *** Quick
 To use TimeLines you will need the following installed:
-1. [Git](https://git-scm.com/downloads). This should be installed first, as it will be used for the others.
-2. [SuperCollider](https://supercollider.github.io/download) and the [TimeLines Quark](https://github.com/lnfiniteMonkeys/TimeLines-SC).
-3. [Haskell Platform](https://www.haskell.org/downloads#platform).
-4. [Emacs](https://www.gnu.org/software/emacs/) and the [timelines-mode](https://github.com/lnfiniteMonkeys/TimeLines-emacs). (support for more editors coming soon!)
-5. *Important*: You will also need the C library ~libsndfile~ installed. Installation might vary for different operating systems. See here for more information on [Linux](https://stackoverflow.com/questions/2057395/package-libsndfile-dev-has-no-installation-candidate#2057481), [macOS](http://macappstore.org/libsndfile/) and [Windows](http://www.mega-nerd.com/libsndfile/#Download).
+1. Git. This should be installed first, as it will be used for the others.
+https://git-scm.com/downloads
+2. SuperCollider (https://supercollider.github.io/download) and the TimeLines Quark (https://github.com/lnfiniteMonkeys/TimeLines-SC).
+3. Haskell Platform (https://www.haskell.org/downloads#platform).
+4. Emacs (https://www.gnu.org/software/emacs) and the ~timelines-mode~ (https://github.com/lnfiniteMonkeys/TimeLines-emacs). (support for more editors coming soon!)
+5. *Important*: You will also need the C library ~libsndfile~ installed. Installation might vary for different operating systems. See here for more information on Linux (https://stackoverflow.com/questions/2057395/package-libsndfile-dev-has-no-installation-candidate#2057481), MacOS (http://macappstore.org/libsndfile/) and Windows (http://www.mega-nerd.com/libsndfile/#Download).
 
 *** In-Depth
 (coming soon)
