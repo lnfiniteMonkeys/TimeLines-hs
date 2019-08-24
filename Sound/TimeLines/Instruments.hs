@@ -25,8 +25,17 @@ scaleToChords scale = map f [0..l]
         f = \x -> [scale!!x, scale!!((x+2)%l), scale!!((x+4)%l)]
 -}
 
+rotate :: Int -> [a] -> [a]
+rotate _ [] = []
+rotate n xs = zipWith const (drop n (cycle xs)) xs
+
+replace a b = a
+
 range lo hi sig = lo + f*sig
   where f = hi - lo
+
+rangeInt lo hi sig = flor $ range lo hi sig
+
 
 realTime phasor dur mult = (fast mult phasor) * (dur/mult) 
 
@@ -57,14 +66,18 @@ degreesToChords scale deg = map (degree scale . add 1) deg
 
 -- | Returns a list of ratios representing a degree of a scale
 degree :: Scale -> Signal Value -> [Signal Value]
-degree scale degreeNum = map semi $ chordsFromScale scale degreeNum
+degree scale degreeNum = map semi $ chordFromDegree scale degreeNum
 
 -- | Shortcut for indexing into a list of semitones
 melody list sig = semi $ fromList list sig
 
-chordsFromScale :: Scale -> Signal Value -> [Signal Value]
-chordsFromScale scale num = map (helperChord scale num) [0..3]
+chordFromDegree :: Scale -> Signal Value -> [Signal Value]
+chordFromDegree scale num = map (helperChord scale num) [0..3]
 
+degreeFromProg l ph = add (-1) $ fromList l ph
+
+condApply func when val = lerp (val) (func val) when
+  
 -- | Takes a chord progression, a number of octaves, and a
 -- | normalised phasor and arpeggiates them
 arpeggio :: ChordProg -> Signal Value -> Signal Value -> Signal Value
@@ -193,6 +206,8 @@ sqr = sign . sin
 -- Convenience functions for use with $
 --add :: (Num a) => Signal a -> Signal a -> Signal a
 add = liftA2 (+)
+sub amt val = val - amt
+subFrom num val = num - val
 mul = liftA2 lazyMul
 div a = mul (1/a) 
 
