@@ -1,13 +1,13 @@
 name:                TimeLines
 version:             0.1.0.0
-github:              "lnfiniteMonkeys/timelines"
+github:              "lnfiniteMonkeys/TimeLines"
 license:             GPL-3
 author:              "lnfinite Monkeys"
 maintainer:          "lnfiniteMonkeys@tuta.io"
 copyright:           "2019 lnfinite Monkeys"
 
 extra-source-files:
-# - README.md
+- README.md
 - ChangeLog.md
 - BootScript.hs
 
@@ -15,10 +15,7 @@ extra-source-files:
 # synopsis:            Short description of your package
 # category:            Web
 
-# To avoid duplicated efforts in documentation and dealing with the
-# complications of embedding Haddock markup inside cabal files, it is
-# common to point users to the README.md file.
-description:         Please see the README on GitHub at <https://github.com/githubuser/timelines2#readme>
+description:         Please see the README on GitHub at <https://github.com/lnfiniteMonkeys/TimeLines#readme>
 
 dependencies:
 - base >= 4.7 && < 5
@@ -36,7 +33,7 @@ library:
   source-dirs: src
 
 tests:
-  timelines2-test:
+  timelines-test:
     main:                Spec.hs
     source-dirs:         test
     ghc-options:
@@ -44,4 +41,4 @@ tests:
     - -rtsopts
     - -with-rtsopts=-N
     dependencies:
-    - timelines2
+    - timelines
