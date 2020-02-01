@@ -4,13 +4,13 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 8e90050437454e8e382755decc1c86849773eef9e7694ae1567c44240dfca0b3
+-- hash: 58f1a5eb43484093924e9c0c6f234d5ed71d8ca2f275f2a63514c48d1bf23fe6
 
 name:           TimeLines
 version:        0.1.0.0
-description:    Please see the README on GitHub at <https://github.com/lnfiniteMonkeys/timelines#readme>
-homepage:       https://github.com/lnfiniteMonkeys/timelines#readme
-bug-reports:    https://github.com/lnfiniteMonkeys/timelines/issues
+description:    Please see the README on GitHub at <https://github.com/lnfiniteMonkeys/TimeLines#readme>
+homepage:       https://github.com/lnfiniteMonkeys/TimeLines#readme
+bug-reports:    https://github.com/lnfiniteMonkeys/TimeLines/issues
 author:         lnfinite Monkeys
 maintainer:     lnfiniteMonkeys@tuta.io
 copyright:      2019 lnfinite Monkeys
@@ -18,12 +18,13 @@ license:        GPL-3
 license-file:   LICENSE
 build-type:     Simple
 extra-source-files:
+    README.md
     ChangeLog.md
     BootScript.hs
 
 source-repository head
   type: git
-  location: https://github.com/lnfiniteMonkeys/timelines
+  location: https://github.com/lnfiniteMonkeys/TimeLines
 
 library
   exposed-modules:
@@ -51,6 +52,7 @@ library
     , hosc ==0.17
     , hsndfile ==0.8.0
     , mtl ==2.2.2
+    , random ==1.1
   default-language: Haskell2010
 
 test-suite timelines-test
@@ -72,5 +74,6 @@ test-suite timelines-test
     , hosc ==0.17
     , hsndfile ==0.8.0
     , mtl ==2.2.2
+    , random ==1.1
     , timelines
   default-language: Haskell2010

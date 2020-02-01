@@ -28,7 +28,7 @@ dependencies:
 - hosc == 0.17
 - hsndfile == 0.8.0
 - async == 2.2.2
-
+- random == 1.1
 library:
   source-dirs: src
 
