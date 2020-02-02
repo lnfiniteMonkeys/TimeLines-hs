@@ -7,6 +7,7 @@ import Sound.TimeLines.Util
 import Sound.TimeLines.OSC
 import Sound.TimeLines.Globals (globalSessionRef)
 
+import System.Random
 import Control.Concurrent (forkIO)
 import Control.Concurrent.Async (mapConcurrently)
 import System.IO.Unsafe (unsafePerformIO)
@@ -148,13 +149,18 @@ evalSynthWithID :: Window -> SynthWithID -> IO [FilePath]
 evalSynthWithID w (synthID, synth) = do
   mapConcurrently (writeParam synthID w) synth
 
+getRandDistinguisher :: IO String
+getRandDistinguisher = do
+  g <- newStdGen
+  return $ concat $ map show $ take 10 (randomRs (0::Int, 9) g)
 
 -- TODO: clean up
 -- | Takes a param and a signal, evaluates it over the current window
 -- | writes it to a file, and returns its filepath
 writeParam :: SynthID -> Window -> ParamSignal -> IO FilePath
 writeParam synthID w pSig@(p, (sig, sr)) = do
-  let filePath = pathToTemp ++ synthID ++ "_" ++ p ++ ".w64"
+  randDistinguisher <- getRandDistinguisher
+  let filePath = pathToTemp ++ synthID ++ "_" ++ p ++ "_" ++ randDistinguisher ++ ".w64"
       ftl = FTL pSig w
   _ <- removeFileIfExists filePath
   h <- openHandle filePath ftl
