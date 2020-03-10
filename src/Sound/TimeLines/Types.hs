@@ -1,3 +1,4 @@
+{-# LANGUAGE DeriveGeneric #-}
 module Sound.TimeLines.Types where
 
 import Control.Applicative
@@ -5,6 +6,9 @@ import Control.Monad
 import Control.Monad.Writer
 import Data.List
 import qualified Data.Set as Set
+
+import Control.DeepSeq
+import GHC.Generics
 
 --import qualified Data.Map.Strict as Map
 
@@ -45,6 +49,8 @@ type Param = String
 -- | The fundamental type of TimeLines. A Signal of
 -- | type "a" is a function from Time to "a"
 newtype Signal a = Signal {runSig :: Time -> a}
+  deriving Generic
+
 
 -- | A signal bundled with a sampling rate 
 type ControlSignal = (Signal Value, SamplingRate)
@@ -71,6 +77,7 @@ type Patch = (SynthID, SynthID)
 data Action = ActionSynth SynthWithID
             | ActionPatch Patch
             | EmptyAction
+            deriving Generic
 
 -- | A Collection of objects to be registered along the way
 type Collector a = Writer [a] ()
@@ -79,18 +86,29 @@ type Collector a = Writer [a] ()
 -- | Infinite: Window is constantly and infinitely increasing in fixed
 -- | increments, with optional resetting.
 data SessionMode = FiniteMode | InfiniteMode
-  deriving (Eq, Show)
+  deriving (Eq, Show, Generic)
+
 
 -- | A list of Actions, a Window, and a Mode
 data Session = Session {actions::[Action],
                         sessionWindow::Window,
                         sessionMode::SessionMode
                        }
+             deriving Generic
 
+  
 -- | Everything needed to write a Param control buffer
 data FiniteTimeLine = FTL {ftlParamSig::ParamSignal,
                            ftlWindow::Window
                           }
+
+
+-- NFData instances
+instance NFData Session where
+instance NFData SessionMode
+instance NFData Action
+instance (NFData a) => NFData (Signal a)
+
 
 -- Defaults --
 defaultSamplingRate = 700 
