@@ -11,7 +11,9 @@ data UnOp = Identity | Negate | Inverse | Exp   | Log   | Sin  | Abs
 data BinOp = Add | Mult | Pow | Mod | ApplyToTime
   deriving (Eq, Show)
 
-toUnFunc :: UnOp -> (Value -> Value)
+data PolyOp = Add | Mul
+
+toUnFunc :: UnOp -> (a -> a)
 toUnFunc op = case op of
   Identity -> id
   Negate -> negate
@@ -33,9 +35,11 @@ toUnFunc op = case op of
   Acosh -> acosh
   Floor -> fromIntegral . floor
   Truncate -> fromIntegral . truncate
---  Fract -> 
+--Fract -> 
 --truncateExpr :: SigExpr -> SigExpr
---truncateExpr exp = 
+--truncateExpr exp =
+
+
   
 toBinFunc :: BinOp -> (Value -> Value -> Value)
 toBinFunc op = case op of
@@ -79,6 +83,7 @@ data SigExpr a = IdExpr
              | ConstExpr a
              | UnExpr UnOp (SigExpr a)
              | BinExpr BinOp (SigExpr a) (SigExpr a)
+             | PartiallyAppliedExpr (BinOp a) (SigExpr a)
              | ArgExpr (SigExpr a) (SigExpr a)
   deriving Show
 

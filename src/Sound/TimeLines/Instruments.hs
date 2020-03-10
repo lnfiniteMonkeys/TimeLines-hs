@@ -25,11 +25,17 @@ scaleToChords scale = map f [0..l]
         f = \x -> [scale!!x, scale!!((x+2)%l), scale!!((x+4)%l)]
 -}
 
+rotate :: Int -> [a] -> [a]
+rotate _ [] = []
+rotate n xs = zipWith const (drop n (cycle xs)) xs
 
+replace a b = a
 
-{- 
 range lo hi sig = lo + f*sig
   where f = hi - lo
+
+rangeInt lo hi sig = flor $ range lo hi sig
+
 
 realTime phasor dur mult = (fast mult phasor) * (dur/mult) 
 
@@ -55,19 +61,23 @@ raise :: SigExpr -> SigExpr -> SigExpr
 raise amt sig = amt +(1-amt)*sig
 
 -- | Takes a scale and a list of degrees and returns a list of chords
-degreesToChords :: Scale -> [SigExpr] -> ChordProg
-degreesToChords scale deg = map (degree scale) deg
+degreesToChords :: Scale -> [Signal Value] -> ChordProg
+degreesToChords scale deg = map (degree scale . add 1) deg
 
 -- | Returns a list of ratios representing a degree of a scale
-degree :: Scale -> SigExpr -> [SigExpr]
-degree scale degreeNum = map semi $ chordsFromScale scale degreeNum
+degree :: Scale -> Signal Value -> [Signal Value]
+degree scale degreeNum = map semi $ chordFromDegree scale degreeNum
 
 -- | Shortcut for indexing into a list of semitones
 melody list sig = semi $ fromList list sig
 
-chordsFromScale :: Scale -> SigExpr -> [SigExpr]
-chordsFromScale scale num = map (helperChord scale num) [0..3]
+chordFromDegree :: Scale -> Signal Value -> [Signal Value]
+chordFromDegree scale num = map (helperChord scale num) [0..3]
 
+degreeFromProg l ph = add (-1) $ fromList l ph
+
+condApply func when val = lerp (val) (func val) when
+  
 -- | Takes a chord progression, a number of octaves, and a
 -- | normalised phasor and arpeggiates them
 arpeggio :: ChordProg -> SigExpr -> SigExpr -> SigExpr
@@ -99,8 +109,9 @@ flor s = UnExpr Floor s
 binaryRand s = flor $ mul 2 $ rand s
 
 
--- | Indexes into a pseudo-random domain using a signal
-rand :: SigExpr -> SigExpr
+-- | Indexes into a sine-based pseudo-random domain using a signal
+-- TODO: add more distributions
+rand :: (RealFrac a, Floating a) => Signal a -> Signal a
 rand s = Signal $ \t -> fract $ (0.5 + 0.5 * (sin $ runSig s t))*1293984.31323
 
 -- | Speeds up a signal by an amount
@@ -119,14 +130,13 @@ slow amt e = ArgExpr
 -- | Takes bpm, number of beats in a bar, and number of bars
 -- | and returns two phasors, one for beat and one for bar,
 -- | and the beat, bar, and total durations
-bpmToPhasors :: SigExpr -> SigExpr -> SigExpr -> (SigExpr, SigExpr, SigExpr, SigExpr, Time)
-bpmToPhasors bpm numBeats numBars =
+--bpmToPhasors :: Signal Value -> Signal Value -> Signal Value -> (Signal Value, Signal Value, Signal Value, Signal Value, Time)
+bpmToPhasors bpm beatsPerBar =
   let beatDur = 60/bpm
-      barDur = numBeats*beatDur
-      totalDur = barDur*numBars
-      phasorBeat = wrap01 $ t/beatDur
-      phasorBar = wrap01 $ t/barDur
-  in  (phasorBeat, phasorBar, beatDur, barDur, constSigToValue totalDur)
+      barDur = beatsPerBar*beatDur
+      beatPhasor = wrap01 $ t/beatDur
+      barPhasor = wrap01 $ t/barDur
+  in  (beatPhasor, barPhasor, beatDur, barDur)
 
 
 -- | Takes two signals and returns 1 if both of them are 1,
@@ -198,8 +208,10 @@ sqr = sign . sin
 -- Convenience functions for use with $
 --add :: (Num a) => SigExpr -> SigExpr -> SigExpr
 add = liftA2 (+)
+sub amt val = val - amt
+subFrom num val = num - val
 mul = liftA2 lazyMul
-
+div a = mul (1/a) 
 
 --Ken Perlin, "Texturing and Modeling: A Procedural Approach"
 -- | Smoothstep

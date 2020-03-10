@@ -1,6 +1,6 @@
 module Main where
 
-import Sound.TimeLines.Context
+import Lib
 
 main :: IO ()
-main = main
+main = someFunc

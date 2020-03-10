@@ -15,7 +15,8 @@ import Control.Monad (void, when)
 import Data.IORef (IORef, newIORef, readIORef, writeIORef, modifyIORef')
 --import qualified Data.Map.Strict as Map
 import Numeric (showFFloat)
-
+--import Data.Global
+import Control.DeepSeq (force)
 {- INTERFACE FUNCTIONS -}
 
 
@@ -60,8 +61,8 @@ addParam p sig = registerParam (p, (sig, fromIntegral defaultSamplingRate))
 (<><) = addParam
 
 -- | Same as above, but with user-defined sampling rate
-addParamSR :: Param -> SamplingRate -> Signal Value -> Collector ParamSignal
-addParamSR p sr sig = registerParam (p, (sig, sr))
+addParamSR :: (Param, SamplingRate) -> Signal Value -> Collector ParamSignal
+addParamSR (p, sr) sig = registerParam (p, (sig, sr))
 (<><<) = addParamSR
 
 -- | Register a patch between two synths
@@ -93,7 +94,7 @@ readSessionRef :: IO Session
 readSessionRef = readIORef globalSessionRef
 
 writeSessionRef :: Session -> IO ()
-writeSessionRef s = modifyIORef' globalSessionRef $ \_ -> s
+writeSessionRef s = modifyIORef' globalSessionRef $ \_ -> force s
 
 -- | Fixed increment by which the window increases in an infinite session
 windowStep :: Time
