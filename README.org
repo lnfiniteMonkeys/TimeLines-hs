@@ -8,11 +8,16 @@ See it in action celebrating 15 years of TOPLAP.org!
 
 http://www.youtube.com/watch?v=dsHnWE6_JbE
 
+* Status Update
+05/06/2021
+
+Development of TimeLines has been in hibernation for a while now, but the project is certainly not dead. The long-term roadmap includes goals like a custom language, a domain-specific editor, a purpose-designed keyboard and other hardware controllers, visual feedback and more. Currently, development efforts are focused there. More details to follow soon.
+
 * What is it?
-TimeLines is an extremely powerful, versatile, and customizable modular synth
+TimeLines is a powerful, versatile, and customizable modular synth
 and sequencer in the form of a live coding language. This means that instead of
 patching cables, moving sliders, and turning dials, one writes and modifies code
-(which are actually just maths in disguise) that describe how each synth's parameters should be controlled over time.
+(which is just maths in disguise) to describe how each synth's parameters should be changing over time.
 
 You can think of it as the automation feature of modern DAWs on steroids, only instead of painstakingly clicking and dragging to get that shape just right, you use maths to do the job for you.
 
