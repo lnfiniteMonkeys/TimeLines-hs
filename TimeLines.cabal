@@ -35,6 +35,7 @@ library
       Sound.TimeLines.TimeLines
       Sound.TimeLines.Types
       Sound.TimeLines.Util
+      Sound.TimeLines.WavWriter
   other-modules:
       Paths_TimeLines
   hs-source-dirs:
@@ -48,7 +49,8 @@ library
     , directory ==1.3.3.0
     , filepath ==1.4.2.1
     , hosc ==0.17
-    , hsndfile ==0.8.0
+    , binary
+    , bytestring
     , mtl ==2.2.2
     , random ==1.1
   default-language: Haskell2010
@@ -70,7 +72,8 @@ test-suite timelines-test
     , directory ==1.3.3.0
     , filepath ==1.4.2.1
     , hosc ==0.17
-    , hsndfile ==0.8.0
+    , binary
+    , bytestring
     , mtl ==2.2.2
     , random ==1.1
     , timelines

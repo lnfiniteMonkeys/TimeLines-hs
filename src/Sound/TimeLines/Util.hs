@@ -17,7 +17,7 @@ import System.FilePath
 import Foreign.Marshal.Array as MA
 import Foreign.Ptr
 import Foreign.ForeignPtr as FP
-import qualified Sound.File.Sndfile as SF
+import qualified Sound.TimeLines.WavWriter as SF
 import Prelude as Pr
 
 import Data.Fixed
@@ -110,9 +110,9 @@ getTLTempDir = do
   return tlTemp
 
 -- | Takes a TLinfo and returns the ReadWrite handle to a file
-openHandle :: FilePath -> FiniteTimeLine -> IO SF.Handle
+openHandle :: FilePath -> FiniteTimeLine -> IO SF.WavHandle
 openHandle path ftl = SF.openFile path SF.ReadWriteMode info
-        where format = SF.Format SF.HeaderFormatW64 SF.SampleFormatDouble SF.EndianFile
+        where format = SF.Format SF.HeaderFormatWav SF.SampleFormatDouble SF.EndianFile
               info = SF.Info (ftlNumSteps ftl) (ftlSR ftl) 1 format 1 True
 
 -- | Samples a constant sig for t = 0
@@ -120,7 +120,7 @@ constSigToValue :: Signal a -> a
 constSigToValue sig = runSig sig 0
 
 -- | Closes a handle
-closeHandle :: SF.Handle -> IO()
+closeHandle :: SF.WavHandle -> IO()
 closeHandle = SF.hClose
 
 -- | Takes a TimeLine and returns a Pointer to an array of its values
