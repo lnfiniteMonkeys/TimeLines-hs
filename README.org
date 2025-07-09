@@ -50,7 +50,6 @@ To use TimeLines you will need the following installed:
 2. [[https://supercollider.github.io/download][SuperCollider]] and the [[https://github.com/lnfiniteMonkeys/TimeLines-SC][TimeLines Quark]].
 3. [[https://www.haskell.org/downloads#platform][Haskell Platform]] (required for Stack and MSYS2 on Windows).
 4. [[https://www.gnu.org/software/emacs][Emacs]] and the [[https://github.com/lnfiniteMonkeys/TimeLines-emacs][timelines-mode]]. (support for more editors coming soon!)
-5. *Important*: You will also need the C library ~libsndfile~ installed. Installation might vary for different operating systems. See here for more information on Linux (https://stackoverflow.com/questions/2057395/package-libsndfile-dev-has-no-installation-candidate#2057481), MacOS (http://macappstore.org/libsndfile/) and Windows (http://www.mega-nerd.com/libsndfile/#Download).
 
 *** In-Depth (for the rest of us)
 1. Install [[https://git-scm.com/downloads][Git]], [[https://supercollider.github.io/download][SuperCollider]], [[https://www.gnu.org/software/emacs][Emacs]], and the [[https://www.haskell.org/downloads#platform][Haskell Platform]] (should be pretty

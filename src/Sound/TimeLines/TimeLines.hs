@@ -1,6 +1,6 @@
 module Sound.TimeLines.TimeLines where
 
-import qualified Sound.File.Sndfile as SF
+import qualified Sound.TimeLines.WavWriter as SF
 
 import Sound.TimeLines.Types
 import Sound.TimeLines.Util
@@ -160,7 +160,7 @@ getRandDistinguisher = do
 writeParam :: SynthID -> Window -> ParamSignal -> IO FilePath
 writeParam synthID w pSig@(p, (sig, sr)) = do
   randDistinguisher <- getRandDistinguisher
-  let filePath = pathToTemp ++ synthID ++ "_" ++ p ++ "_" ++ randDistinguisher ++ ".w64"
+  let filePath = pathToTemp ++ synthID ++ "_" ++ p ++ "_" ++ randDistinguisher ++ ".wav"
       ftl = FTL pSig w
   _ <- removeFileIfExists filePath
   h <- openHandle filePath ftl
