@@ -1,0 +1,7 @@
+{
+  "database": "dolt",
+  "backend": "dolt",
+  "dolt_mode": "server",
+  "dolt_database": "TimeLines_hs",
+  "project_id": "cbd821d1-63b6-4310-aa4f-2d26b0d37ea9"
+}
